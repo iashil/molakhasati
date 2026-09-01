@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول - منصة ملخصاتي</title>
+    <!-- 1. استدعاء مكتبة Tailwind أولاً -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 2. إعداد الوضع الداكن بعد المكتبة -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-neutral-900 dark:text-gray-100 min-h-screen flex items-center justify-center p-4 transition-colors duration-300">
+
+    <button type="button" id="themeToggle" class="fixed top-4 left-4 border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" aria-label="تغيير لون الخلفية">🌙 الوضع الداكن</button>
+
+    <div class="w-full max-w-5xl flex flex-col lg:flex-row-reverse gap-5 items-stretch">
+
+        <!-- بطاقة القواعد في الجهة اليمنى -->
+        <aside class="w-full lg:w-80 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 p-6 rounded-lg shadow-sm transition-colors duration-300">
+            <div class="flex items-center gap-3 mb-5">
+                <div class="w-10 h-10 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 flex items-center justify-center text-lg shadow-sm">
+                    📜
+                </div>
+                <div>
+                    <h2 class="font-bold text-base">قواعد المنصة</h2>
+                    <p class="text-[11px] text-gray-500 dark:text-gray-400">يرجى الالتزام بالقواعد</p>
+                </div>
+            </div>
+
+            <div class="space-y-3 text-xs leading-6">
+                <div class="flex gap-2">
+                    <span>🚫</span>
+                    <p>ممنوع الدخول بأسماء أشخاص آخرين، استخدم اسمك فقط.</p>
+                </div>
+                <div class="flex gap-2">
+                    <span>⚠️</span>
+                    <p>إذا دخلت باسم غير اسمك، سيتم طردك من المنصة بواسطة الإدارة.</p>
+                </div>
+                <div class="flex gap-2">
+                    <span>👨‍💼</span>
+                    <p>الادمن يستطيع رؤية هوية صاحب المنشور حتى عند النشر بشكل مجهول.</p>
+                </div>
+                <div class="flex gap-2">
+                    <span>🕵️</span>
+                    <p>تستطيع إرسال التسريبات بشكل مجهول، ولن تظهر هويتك للمستخدمين.</p>
+                </div>
+                <div class="flex gap-2">
+                    <span>📚</span>
+                    <p>تستطيع إرسال صور الدفاتر والكتب بهويتك العادية.</p>
+                </div>
+                <div class="flex gap-2">
+                    <span>🔎</span>
+                    <p>ابحث عن ما تريد وانشر ما تريد.</p>
+                </div>
+                <div class="flex gap-2">
+                    <span>🔞</span>
+                    <p>عند إرسال كلمة بذيئة، يتم تنبيه الإدارة مع صورة واسم الشخص الذي أرسلها.</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- بطاقة تسجيل الدخول -->
+        <div class="w-full lg:flex-1 lg:max-w-md lg:mx-auto bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 p-8 rounded-lg shadow-sm space-y-6 transition-colors duration-300">
+        
+        <!-- التبديل بين الدخول والتسجيل -->
+        <div class="flex border-b border-gray-200 dark:border-neutral-700 pb-2 gap-4 justify-center">
+            <button onclick="switchTab('login')" id="tabLogin" class="font-bold text-gray-700 dark:text-white border-b-2 border-gray-700 dark:border-white px-2 pb-1 transition-all">تسجيل الدخول</button>
+            <button onclick="switchTab('register')" id="tabRegister" class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-2 pb-1 transition-all">إنشاء حساب جديد</button>
+        </div>
+
+        <!-- 1. نموذج تسجيل الدخول -->
+        <form id="loginForm" class="space-y-4">
+            <div>
+                <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">الاسم</label>
+                <input type="text" id="loginName" required dir="auto" class="w-full bg-gray-50 dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 rounded-md p-2 text-xs outline-none focus:border-gray-600 dark:focus:border-gray-400" placeholder="أدخل اسمك (عربي أو English)">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">كلمة المرور</label>
+                <div class="relative">
+                    <input type="password" id="loginPassword" required dir="auto" class="w-full bg-gray-50 dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 rounded-md p-2 pl-8 text-xs outline-none focus:border-gray-600 dark:focus:border-gray-400">
+                    <button type="button" onclick="togglePass('loginPassword', this)" class="absolute left-2 top-1/2 -translate-y-1/2 text-xs opacity-60 hover:opacity-100 select-none">👁️</button>
+                </div>
+            </div>
+            <div id="loginError" class="hidden text-xs text-red-600 dark:text-red-400 text-center bg-red-50 dark:bg-red-900/30 p-2 rounded"></div>
+            <button type="submit" class="w-full bg-gray-900 dark:bg-gray-700 text-white text-xs font-medium py-2.5 rounded-md hover:bg-black dark:hover:bg-gray-600 transition-colors">دخول</button>
+        </form>
+
+        <!-- 2. نموذج إنشاء حساب جديد -->
+        <form id="registerForm" class="space-y-4 hidden">
+            <div>
+                <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">الاسم المسموح به</label>
+                <input type="text" id="regName" required dir="auto" class="w-full bg-gray-50 dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 rounded-md p-2 text-xs outline-none focus:border-gray-600 dark:focus:border-gray-400" placeholder="مثال: ashil أو فراس">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">كلمة المرور الجديدة</label>
+                <div class="relative">
+                    <input type="password" id="regPassword" required dir="auto" class="w-full bg-gray-50 dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 rounded-md p-2 pl-8 text-xs outline-none focus:border-gray-600 dark:focus:border-gray-400">
+                    <button type="button" onclick="togglePass('regPassword', this)" class="absolute left-2 top-1/2 -translate-y-1/2 text-xs opacity-60 hover:opacity-100 select-none">👁️</button>
+                </div>
+            </div>
+            <div id="regError" class="hidden text-xs text-red-600 dark:text-red-400 text-center bg-red-50 dark:bg-red-900/30 p-2 rounded"></div>
+            <button type="submit" class="w-full bg-green-600 text-white text-xs font-medium py-2.5 rounded-md hover:bg-green-700 transition-colors">إنشاء الحساب ودخول</button>
+        </form>
+
+        </div>
+    </div>
+
+    <footer class="fixed bottom-4 inset-x-0 flex justify-center">
+        <a href="https://www.instagram.com/iashil_/" target="_blank" rel="noopener noreferrer" class="inline-block border border-black bg-black px-4 py-2 text-xs text-white rounded-full dark:border-white dark:bg-white dark:text-black transition-colors hover:opacity-90">
+            Created By: ashil
+        </a>
+    </footer>
+
+    <script>
+        const FIREBASE_CONFIG = {
+            apiKey: 'AIzaSyByDS_xwe-nZQWlWTMUgRex4ITMPWtGRKQ',
+            authDomain: 'molakhasat-web.firebaseapp.com',
+            projectId: 'molakhasat-web',
+            messagingSenderId: '87734758041',
+            appId: '1:87734758041:web:22251786db9b0aee2fa608'
+        };
+        const firebaseConfigured = Object.values(FIREBASE_CONFIG).every(value => !value.includes('ضع_'));
+        let db = null;
+        if (firebaseConfigured) {
+            firebase.initializeApp(FIREBASE_CONFIG);
+            db = firebase.firestore();
+        }
+
+        const allowedNames = ["اصيل", 'فراس', 'أحمد', "صلاح", "سهيل", "محمد", "رشاد", "ابو بكر", "حسين", "صالح", "احمد ياسين", "معتز", "منير", "سالم", "مهاب", "فراس", "شهاب", "عمار", "عبد الحكيم", "هيثم محمد", "هيثم ابراهيم", "صالح", "قصي", "سيف", "صادق", "يوسف", "احمد باوزير", "جراح"];
+
+        function applyTheme(isDark) {
+            document.documentElement.classList.toggle('dark', isDark);
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            document.getElementById('themeToggle').textContent = isDark ? '☀️ الوضع الفاتح' : '🌙 الوضع الداكن';
+        }
+
+        applyTheme(localStorage.getItem('theme') === 'dark');
+        document.getElementById('themeToggle').addEventListener('click', function() {
+            applyTheme(!document.documentElement.classList.contains('dark'));
+        });
+
+        function togglePass(inputId, btn) {
+            const input = document.getElementById(inputId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.textContent = '🔒';
+            } else {
+                input.type = 'password';
+                btn.textContent = '👁️';
+            }
+        }
+
+        const forbiddenWords = ['سبام', 'إعلان', 'كلمة_ممنوعة',"فاك يو", "فاكيو", "انيك", "انيكك", "انيككم", "اهين", "اهينك", "اهينكم", "سكس", "زاني", "زانيين", "زنوات", "عار", "عاركم", "مخنوث", "مخنث", "مخنثين", "مخنثون", "مخنوثين", "مخنوثات", "مخنثات", "معروبه", "عرب", "غراب", "انهش", "انهاش", "كرنج", "كس", "كسمك", "كسمكم", "كسك", "كسهم", "طيز", "اطياز", "طيزهم", "اطيازكم", "قضيب", "مازوخي", "مازوخيين"];
+
+        function hasForbiddenWords(text) {
+            const lowerText = text.toLowerCase();
+            return forbiddenWords.some(word => lowerText.includes(word.toLowerCase()));
+        }
+
+        const currentUser = JSON.parse(localStorage.getItem('current_user'));
+        if (currentUser) {
+            // تم إصلاح هذا السطر ليعمل بشكل صحيح
+            if (currentUser.role === 'admin') window.location.href = 'admin.html';
+            else window.location.href = 'index.html';
+        }
+
+        (function initDB() {
+            let users = JSON.parse(localStorage.getItem('app_users') || '[]');
+            users = users.filter(u => u.name.toLowerCase() !== 'admin');
+
+            const uniqueUsers = [];
+            users.forEach(user => {
+                const existingUser = uniqueUsers.find(existing => normalizeText(existing.name) === normalizeText(user.name));
+                if (!existingUser) {
+                    uniqueUsers.push(user);
+                } else if (user.lastLoginAt && (!existingUser.lastLoginAt || user.lastLoginAt > existingUser.lastLoginAt)) {
+                    existingUser.lastLoginAt = user.lastLoginAt;
+                }
+            });
+            users = uniqueUsers;
+            
+            // التأكد من عدم تكرار الحسابات عند كل تحديث للصفحة
+            const admin1Exists = users.some(u => u.name === 'ashil admin');
+            const admin2Exists = users.some(u => u.name === 'feras admin');
+
+            if (!admin1Exists) {
+                users.push({ id: 'admin_1', name: 'ashil admin', password: 'ashil68372', role: 'admin', status: 'active' });
+            }
+            if (!admin2Exists) {
+                users.push({ id: 'admin_2', name: 'feras admin', password: 'feras2009', role: 'admin', status: 'active' });
+            }
+            
+            localStorage.setItem('app_users', JSON.stringify(users));
+        })();
+
+        function switchTab(tab) {
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const tabLogin = document.getElementById('tabLogin');
+            const tabRegister = document.getElementById('tabRegister');
+
+            if (tab === 'login') {
+                loginForm.classList.remove('hidden');
+                registerForm.classList.add('hidden');
+                tabLogin.className = "font-bold text-gray-700 dark:text-white border-b-2 border-gray-700 dark:border-white px-2 pb-1 transition-all";
+                tabRegister.className = "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-2 pb-1 transition-all";
+            } else {
+                registerForm.classList.remove('hidden');
+                loginForm.classList.add('hidden');
+                tabRegister.className = "font-bold text-gray-700 dark:text-white border-b-2 border-gray-700 dark:border-white px-2 pb-1 transition-all";
+                tabLogin.className = "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-2 pb-1 transition-all";
+            }
+        }
+
+        function normalizeText(text) {
+            return text.trim().toLowerCase();
+        }
+
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const rawName = document.getElementById('regName').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const errorDiv = document.getElementById('regError');
+
+            const normalizedName = normalizeText(rawName);
+
+            if (normalizedName === 'admin' || normalizedName.includes('admin')) {
+                errorDiv.textContent = 'لا يمكنك إنشاء حساب بهذه الصلاحية من هنا.';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            const isAllowed = allowedNames.some(name => normalizeText(name) === normalizedName);
+            if (!isAllowed) {
+                errorDiv.textContent = 'عذراً، هذا الاسم غير مصرح له بإنشاء حساب.';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            const users = JSON.parse(localStorage.getItem('app_users') || '[]');
+            const nameExists = users.some(u => normalizeText(u.name) === normalizedName);
+            if (nameExists) {
+                errorDiv.textContent = 'هذا الاسم مسجل بالفعل، يرجى تسجيل الدخول.';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            const newUser = {
+                id: 'user_' + Date.now(),
+                name: rawName,
+                password: password,
+                role: 'user',
+                status: 'active',
+                lastLoginAt: new Date().toISOString()
+            };
+
+            users.push(newUser);
+            localStorage.setItem('app_users', JSON.stringify(users));
+            localStorage.setItem('current_user', JSON.stringify(newUser));
+            if (db) await db.collection('users').doc(newUser.id).set({
+                name: newUser.name,
+                role: newUser.role,
+                status: newUser.status,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            window.location.href = 'index.html';
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const rawName = document.getElementById('loginName').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const errorDiv = document.getElementById('loginError');
+
+            const users = JSON.parse(localStorage.getItem('app_users') || '[]');
+            const normalizedName = normalizeText(rawName);
+
+            const user = users.find(u => normalizeText(u.name) === normalizedName && u.password === password);
+
+            if (!user) {
+                errorDiv.textContent = 'الاسم أو كلمة المرور غير صحيحة.';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            if (user.status === 'banned') {
+                errorDiv.textContent = 'تم حظر هذا الحساب من استخدام المنصة.';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            user.lastLoginAt = new Date().toISOString();
+            localStorage.setItem('app_users', JSON.stringify(users));
+            localStorage.setItem('current_user', JSON.stringify(user));
+            if (db) await db.collection('users').doc(user.id).set({
+                name: user.name,
+                role: user.role,
+                status: user.status,
+                lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, {merge: true});
+            if (user.role === 'admin') window.location.href = 'admin.html';
+            else window.location.href = 'index.html';
+        });
+    </script>
+</body>
+</html>
