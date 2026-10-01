@@ -270,6 +270,7 @@
         </a>
     </footer>
 
+    <script src="comments.js"></script>
     <script>
         let currentUser = null;
         let selectedImagesBase64 = [];
@@ -714,6 +715,7 @@
                             }).join('')}
                         </div>
                     ` : (post.image ? `<img src="${post.image}" class="w-full max-h-80 object-cover border-t border-gray-100 dark:border-neutral-800">` : '')}
+                    ${renderPostComments(post)}
                 `;
                 feedContainer.appendChild(postElement);
             });
@@ -753,6 +755,8 @@
         function renderPosts() {
             renderPostsFromCloud();
         }
+
+        setCommentsContext(db, currentUser);
 
         function listenForPosts() {
             if (!db) {

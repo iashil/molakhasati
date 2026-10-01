@@ -199,6 +199,7 @@
         </a>
     </footer>
 
+    <script src="comments.js"></script>
     <script>
         let currentUser = null;
         let sidebarIsOpen = window.innerWidth >= 1024;
@@ -300,6 +301,7 @@
                 return;
             }
             currentUser = JSON.parse(userStr);
+            setCommentsContext(db, currentUser);
             document.getElementById('userNameDisplay').textContent = currentUser.name || 'حسابي';
 
             if (currentUser.role === 'admin') {
@@ -561,6 +563,7 @@
                                 }).join('')}
                             </div>
                         ` : ''}
+                        ${renderPostComments(post)}
                     </div>
                 `;
             }).join('');

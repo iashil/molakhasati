@@ -148,6 +148,7 @@
         </div>
     </div>
 
+    <script src="comments.js"></script>
     <script>
         const FIREBASE_CONFIG = {
             apiKey: 'AIzaSyByDS_xwe-nZQWlWTMUgRex4ITMPWtGRKQ',
@@ -190,6 +191,7 @@
                 });
             });
         }
+        setCommentsContext(firestore, loggedInUser);
 
         function getUsers() {
             return JSON.parse(localStorage.getItem('app_users') || '[]');
@@ -353,7 +355,7 @@
                 ? posts.filter(post => savedIds.includes(post.id))
                 : posts.filter(post => post.authorId === viewedUserId);
             const container = document.getElementById('profilePosts');
-            container.innerHTML = visible.length ? visible.map(post => `<article class="profile-post border-b border-gray-100 dark:border-neutral-700 pb-4 text-xs space-y-2"><a href="index.html#post-${encodeURIComponent(post.id)}" class="block hover:underline"><span class="font-bold">${escapeHtml(post.subject || 'منشور')}</span><span class="text-gray-500"> • ${escapeHtml(post.text || 'ملف مرفق')}</span></a>${post.images?.length ? `<div class="grid grid-cols-2 gap-2">${post.images.map(image => `<img src="${image}" alt="" class="w-full h-24 object-cover rounded border">`).join('')}</div>` : ''}${post.pdfURL ? `<a href="${post.pdfURL}" target="_blank" rel="noopener" class="text-blue-700 dark:text-blue-400 underline">فتح ملف PDF: ${escapeHtml(post.pdfName || 'document.pdf')}</a>` : ''}</article>`).join('') : '<p class="text-center text-xs text-gray-500 py-4">لا توجد منشورات هنا.</p>';
+            container.innerHTML = visible.length ? visible.map(post => `<article class="profile-post border border-gray-100 dark:border-neutral-700 rounded-md text-xs space-y-2"><div class="p-3"><a href="index.html#post-${encodeURIComponent(post.id)}" class="block hover:underline"><span class="font-bold">${escapeHtml(post.subject || 'منشور')}</span><span class="text-gray-500"> • ${escapeHtml(post.text || 'ملف مرفق')}</span></a>${post.images?.length ? `<div class="grid grid-cols-2 gap-2 mt-2">${post.images.map(image => `<img src="${image}" alt="" class="w-full h-24 object-cover rounded border">`).join('')}</div>` : ''}${post.pdfURL ? `<a href="${post.pdfURL}" target="_blank" rel="noopener" class="text-blue-700 dark:text-blue-400 underline">فتح ملف PDF: ${escapeHtml(post.pdfName || 'document.pdf')}</a>` : ''}</div>${renderPostComments(post)}</article>`).join('') : '<p class="text-center text-xs text-gray-500 py-4">لا توجد منشورات هنا.</p>';
         }
 
         function showTab(tab) {
