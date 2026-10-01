@@ -18,7 +18,7 @@ function escapeCommentHtml(value) {
 
 function renderCommentItem(comment) {
     return `
-        <article class="border-b border-gray-100 dark:border-neutral-700 py-2 last:border-0">
+        <article id="post-comment-${escapeCommentHtml(comment.id)}" data-comment-id="${escapeCommentHtml(comment.id)}" class="border-b border-gray-100 dark:border-neutral-700 py-2 last:border-0">
             <p class="text-[11px] font-semibold">${escapeCommentHtml(comment.authorName || 'مستخدم')}</p>
             <p class="text-xs leading-relaxed text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">${escapeCommentHtml(comment.text)}</p>
             ${comment.createdAt ? `<time class="text-[10px] text-gray-400">${escapeCommentHtml(new Date(comment.createdAt).toLocaleString('ar-EG'))}</time>` : ''}
@@ -41,7 +41,9 @@ function renderPostComments(post) {
         : '<p class="pt-2 text-[11px] text-gray-500">سجّل الدخول لإضافة تعليق.</p>';
 
     return `<details id="${escapeCommentHtml(commentsId)}" class="border-t border-gray-100 px-3 dark:border-neutral-800"${wasOpen ? ' open' : ''}>
-        <summary data-comment-count="${comments.length}" class="cursor-pointer list-none py-3 text-xs font-medium text-gray-600 dark:text-gray-300">التعليقات (${comments.length})</summary>
+        <summary data-comment-count="${comments.length}" class="flex cursor-pointer list-none items-center justify-between rounded-md border border-gray-200 bg-gray-50 px-3 py-2.5 text-xs font-semibold text-gray-800 hover:bg-gray-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-gray-100 dark:hover:bg-neutral-700">
+            <span>💬 التعليقات (${comments.length})</span><span aria-hidden="true" class="text-base">⌄</span>
+        </summary>
         <div class="pb-3">
             <div data-comment-list class="divide-y divide-gray-100 dark:divide-neutral-700">${commentsMarkup}</div>
             ${formMarkup}
@@ -87,10 +89,12 @@ document.addEventListener('submit', async event => {
         }
         const details = form.closest('details');
         const commentList = details.querySelector('[data-comment-list]');
-        commentList.querySelector('p')?.remove();
-        commentList.insertAdjacentHTML('beforeend', renderCommentItem(comment));
+        if (!document.getElementById(`post-comment-${comment.id}`)) {
+            commentList.querySelector('p')?.remove();
+            commentList.insertAdjacentHTML('beforeend', renderCommentItem(comment));
+        }
         const summary = details.querySelector('summary');
-        const count = Number(summary.dataset.commentCount || 0) + 1;
+        const count = commentList.querySelectorAll('[data-comment-id]').length;
         summary.dataset.commentCount = count;
         summary.textContent = `التعليقات (${count})`;
         details.open = true;

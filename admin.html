@@ -411,9 +411,59 @@
             renderAdminData();
         }
 
+        let cachedAdminUsers = null;
+        let cachedAdminPosts = null;
+
+        function escapeAdminHtml(value) {
+            return String(value ?? '').replace(/[&<>\'"]/g, character => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[character]));
+        }
+
+        async function deletePostComment(postId, commentId) {
+            if (!confirm('هل أنت متأكد من حذف هذا التعليق؟')) return;
+
+            try {
+                if (db) {
+                    const postRef = db.collection('posts').doc(postId);
+                    const postSnapshot = await postRef.get();
+                    if (!postSnapshot.exists) throw new Error('المنشور غير موجود.');
+                    const comments = postSnapshot.data().comments || [];
+                    const comment = comments.find(item => item.id === commentId);
+                    if (!comment) throw new Error('التعليق غير موجود أو حُذف بالفعل.');
+                    await postRef.update({comments: firebase.firestore.FieldValue.arrayRemove(comment)});
+                } else {
+                    const localPosts = JSON.parse(localStorage.getItem('app_posts') || '[]');
+                    const post = localPosts.find(item => item.id === postId);
+                    if (!post) throw new Error('المنشور غير موجود.');
+                    post.comments = (post.comments || []).filter(item => item.id !== commentId);
+                    localStorage.setItem('app_posts', JSON.stringify(localPosts));
+                }
+
+                cachedAdminPosts = (cachedAdminPosts || []).map(post => post.id === postId
+                    ? {...post, comments: (post.comments || []).filter(item => item.id !== commentId)}
+                    : post);
+                await renderAdminData(cachedAdminUsers, cachedAdminPosts);
+            } catch (error) {
+                console.error('تعذر حذف التعليق:', error);
+                alert('تعذر حذف التعليق. تحقق من اتصالك وصلاحيات Firestore ثم حاول مجددًا.');
+            }
+        }
+
+        document.getElementById('adminPostsFeed').addEventListener('click', event => {
+            const button = event.target.closest('[data-delete-comment-id]');
+            if (button) deletePostComment(button.dataset.postId, button.dataset.deleteCommentId);
+        });
+
         async function renderAdminData(cloudUsers, cloudPosts) {
-            const users = cloudUsers || JSON.parse(localStorage.getItem('app_users') || '[]');
-            const posts = cloudPosts || JSON.parse(localStorage.getItem('app_posts') || '[]');
+            if (cloudUsers) cachedAdminUsers = cloudUsers;
+            if (cloudPosts) cachedAdminPosts = cloudPosts;
+            const users = cloudUsers || cachedAdminUsers || JSON.parse(localStorage.getItem('app_users') || '[]');
+            const posts = cloudPosts || cachedAdminPosts || JSON.parse(localStorage.getItem('app_posts') || '[]');
 
             // 1. جدول الحسابات
             const usersTbody = document.getElementById('usersTableBody');
@@ -460,6 +510,21 @@
                     ${p.text ? `<p class="text-xs text-gray-800 dark:text-gray-200">${p.text}</p>` : ''}
                     ${p.pdfURL || (p.pdf && p.pdf.data) ? `<a href="${p.pdfURL || p.pdf.data}" target="_blank" rel="noopener" download="${p.pdfName || p.pdf.name || 'document.pdf'}" class="inline-flex items-center gap-2 text-xs text-blue-700 dark:text-blue-400 underline">📄 فتح ملف PDF: ${p.pdfName || p.pdf.name || 'document.pdf'}</a>` : ''}
                     ${p.image ? `<img src="${p.image}" class="max-h-40 rounded border dark:border-neutral-700 object-cover">` : ''}
+                    <details class="border-t border-gray-200 pt-2 dark:border-neutral-700">
+                        <summary class="cursor-pointer text-xs font-semibold text-gray-700 dark:text-gray-200">التعليقات (${Array.isArray(p.comments) ? p.comments.length : 0})</summary>
+                        <div class="mt-2 space-y-2">
+                            ${(Array.isArray(p.comments) ? p.comments : []).map(comment => `
+                                <article class="flex items-start justify-between gap-3 rounded border border-gray-200 p-2 dark:border-neutral-700">
+                                    <div class="min-w-0">
+                                        <p class="text-[11px] font-semibold">${escapeAdminHtml(comment.authorName || 'مستخدم')}</p>
+                                        <p class="whitespace-pre-wrap break-words text-xs">${escapeAdminHtml(comment.text)}</p>
+                                        <time class="text-[10px] text-gray-400">${comment.createdAt ? escapeAdminHtml(formatAdminTime(comment.createdAt)) : ''}</time>
+                                    </div>
+                                    <button type="button" data-post-id="${escapeAdminHtml(p.id)}" data-delete-comment-id="${escapeAdminHtml(comment.id)}" class="shrink-0 text-[10px] text-red-600 hover:underline dark:text-red-400">حذف التعليق</button>
+                                </article>
+                            `).join('') || '<p class="text-[11px] text-gray-500">لا توجد تعليقات.</p>'}
+                        </div>
+                    </details>
                 `;
                 postsContainer.appendChild(div);
             });
