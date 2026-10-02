@@ -194,6 +194,12 @@
                 <h3 class="text-sm font-bold text-gray-800 dark:text-gray-200 mb-4">المحفوظات</h3>
                 <div id="savedPostsFeed" class="space-y-4"></div>
             </div>
+
+            <div class="border-t-2 border-gray-200 pt-4 dark:border-neutral-800">
+                <h3 class="mb-3 text-sm font-bold text-gray-800 dark:text-gray-200">الأسئلة المحفوظة</h3>
+                <p id="savedQuestionsStatus" role="status" class="py-4 text-center text-xs text-gray-500">جارٍ تحميل الأسئلة المحفوظة...</p>
+                <div id="savedQuestionsFeed" class="space-y-4"></div>
+            </div>
         </main>
     </div>
 
@@ -316,6 +322,7 @@
 
             loadSidebarUser();
             loadSavedPosts();
+            loadSavedQuestions();
         })();
 
         function toggleTheme() {
@@ -413,6 +420,68 @@
 
         function getBookmarks() {
             return JSON.parse(localStorage.getItem('bookmarked_posts') || '[]');
+        }
+
+        function getSavedQuestionIds() {
+            try {
+                const ids = JSON.parse(localStorage.getItem('bookmarked_questions') || '[]');
+                return Array.isArray(ids) ? ids : [];
+            } catch (_) {
+                return [];
+            }
+        }
+
+        async function loadSavedQuestions() {
+            const container = document.getElementById('savedQuestionsFeed');
+            const status = document.getElementById('savedQuestionsStatus');
+            const savedIds = getSavedQuestionIds();
+            if (!savedIds.length) {
+                renderSavedQuestions([], container);
+                return;
+            }
+
+            status.textContent = 'جارٍ تحميل الأسئلة المحفوظة...';
+            status.classList.remove('hidden');
+            try {
+                let questions;
+                if (db) {
+                    await firebaseAuthReady;
+                    const snapshots = await Promise.all(savedIds.slice().reverse().map(id => db.collection('questions').doc(id).get()));
+                    questions = snapshots.filter(snapshot => snapshot.exists).map(snapshot => ({id: snapshot.id, ...snapshot.data()}));
+                } else {
+                    const allQuestions = JSON.parse(localStorage.getItem('app_questions') || '[]');
+                    questions = savedIds.slice().reverse().map(id => allQuestions.find(question => question.id === id)).filter(Boolean);
+                }
+                renderSavedQuestions(questions, container);
+            } catch (error) {
+                console.error('تعذر تحميل الأسئلة المحفوظة:', error);
+                status.textContent = 'تعذر تحميل الأسئلة المحفوظة. تحقق من الاتصال وحاول مجددًا.';
+                status.classList.remove('hidden');
+            }
+        }
+
+        function renderSavedQuestions(questions, container) {
+            const status = document.getElementById('savedQuestionsStatus');
+            if (!questions.length) {
+                container.innerHTML = '';
+                status.textContent = 'لا توجد أسئلة محفوظة.';
+                status.classList.remove('hidden');
+                return;
+            }
+
+            status.classList.add('hidden');
+            container.innerHTML = questions.map(question => {
+                const imageURL = AppSecurity.safeImageUrl(question.imageURL);
+                const answers = Array.isArray(question.answers) ? question.answers : [];
+                const answersMarkup = answers.length
+                    ? answers.map(answer => `<article class="flex items-start gap-2 border-b border-gray-100 py-3 last:border-0 dark:border-neutral-800"><img src="${AppSecurity.escapeHtml(getSafeProfileImageUrl(answer.authorPhotoURL || ''))}" alt="" class="h-8 w-8 shrink-0 rounded-full object-cover"><div class="min-w-0 flex-1"><div class="flex flex-wrap items-center justify-between gap-2"><strong class="text-[10px]">${AppSecurity.escapeHtml(answer.authorName || 'مستخدم')}</strong><time class="text-[9px] text-gray-400">${formatPostTime(answer.createdAt)}</time></div><p class="mt-1 whitespace-pre-wrap break-words text-xs text-gray-700 dark:text-gray-300">${AppSecurity.escapeHtml(answer.text || '')}</p></div></article>`).join('')
+                    : '<p class="py-3 text-[10px] text-gray-500">لا توجد إجابات بعد.</p>';
+                return `<article class="overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+                    <div class="flex items-start gap-3 p-4"><img src="${AppSecurity.escapeHtml(getSafeProfileImageUrl(question.authorPhotoURL || ''))}" alt="" class="h-10 w-10 shrink-0 rounded-full object-cover"><div class="min-w-0 flex-1"><div class="flex flex-wrap items-center justify-between gap-2"><strong class="text-xs">${AppSecurity.escapeHtml(question.authorName || 'مستخدم')}</strong><time class="text-[10px] text-gray-400">${formatPostTime(question.createdAt)}</time></div><p class="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed">${AppSecurity.escapeHtml(question.text || '')}</p></div></div>
+                    ${imageURL ? `<img src="${AppSecurity.escapeHtml(imageURL)}" alt="صورة السؤال" loading="lazy" class="max-h-80 w-full border-y border-gray-100 object-contain dark:border-neutral-800">` : ''}
+                    <details class="border-t border-gray-100 px-4 dark:border-neutral-800"><summary class="cursor-pointer py-3 text-xs font-semibold text-blue-700 dark:text-blue-300">الإجابات (${answers.length})</summary><div class="pb-2">${answersMarkup}</div></details>
+                </article>`;
+            }).join('');
         }
 
         async function loadSavedPosts() {

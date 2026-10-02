@@ -188,10 +188,16 @@
             </div>
         </section>
 
-        <!-- 3. إدارة المنشورات وكشف هويات النشر المجهول -->
+        <!-- 3. إدارة المنشورات والتعليقات -->
         <section class="admin-card bg-white dark:bg-neutral-800 p-6 rounded-lg border border-gray-200 dark:border-neutral-700 shadow-sm space-y-4 transition-colors">
-            <h2 class="font-bold text-sm text-gray-800 dark:text-gray-100 border-b border-gray-200 dark:border-neutral-700 pb-2">إدارة المحتوى والمنشورات (مع كشف كُتّاب المنشورات المجهولة)</h2>
+            <h2 class="font-bold text-sm text-gray-800 dark:text-gray-100 border-b border-gray-200 dark:border-neutral-700 pb-2">المنشورات والتعليقات</h2>
             <div id="adminPostsFeed" class="space-y-4"></div>
+        </section>
+
+        <section class="admin-card bg-white dark:bg-neutral-800 p-6 rounded-lg border border-gray-200 dark:border-neutral-700 shadow-sm space-y-4 transition-colors">
+            <h2 class="font-bold text-sm text-gray-800 dark:text-gray-100 border-b border-gray-200 dark:border-neutral-700 pb-2">الأسئلة والإجابات</h2>
+            <p id="adminQuestionsStatus" role="status" class="text-xs text-gray-500 dark:text-gray-400">جارٍ تحميل الأسئلة...</p>
+            <div id="adminQuestionsFeed" class="space-y-4"></div>
         </section>
 
     </main>
@@ -420,6 +426,7 @@
 
         let cachedAdminUsers = null;
         let cachedAdminPosts = null;
+        let cachedAdminQuestions = null;
 
         function escapeAdminHtml(value) {
             return String(value ?? '').replace(/[&<>\'"]/g, character => ({
@@ -485,6 +492,16 @@
             if (actionButton.dataset.adminAction === 'delete-post') deletePost(actionButton.dataset.postId);
         });
 
+        document.getElementById('adminQuestionsFeed').addEventListener('click', event => {
+            const questionButton = event.target.closest('[data-admin-delete-question]');
+            if (questionButton) {
+                deleteAdminQuestion(questionButton.dataset.adminDeleteQuestion);
+                return;
+            }
+            const answerButton = event.target.closest('[data-admin-delete-answer]');
+            if (answerButton) deleteAdminQuestionAnswer(answerButton.dataset.questionId, answerButton.dataset.adminDeleteAnswer);
+        });
+
         document.getElementById('usersTableBody').addEventListener('click', event => {
             const button = event.target.closest('[data-admin-action]');
             if (!button) return;
@@ -492,11 +509,62 @@
             if (button.dataset.adminAction === 'delete-user') deleteUser(button.dataset.userId);
         });
 
-        async function renderAdminData(cloudUsers, cloudPosts) {
+        async function deleteAdminQuestion(questionId) {
+            if (!confirm('هل تريد حذف السؤال وجميع إجاباته؟')) return;
+            try {
+                if (db) {
+                    const questionRef = db.collection('questions').doc(questionId);
+                    const snapshot = await questionRef.get();
+                    if (!snapshot.exists) throw new Error('السؤال غير موجود أو حُذف بالفعل.');
+                    await questionRef.delete();
+                } else {
+                    const questions = JSON.parse(localStorage.getItem('app_questions') || '[]')
+                        .filter(question => question.id !== questionId);
+                    localStorage.setItem('app_questions', JSON.stringify(questions));
+                }
+                cachedAdminQuestions = (cachedAdminQuestions || []).filter(question => question.id !== questionId);
+                await renderAdminData(cachedAdminUsers, cachedAdminPosts, cachedAdminQuestions);
+            } catch (error) {
+                console.error('تعذر حذف السؤال من لوحة الإدارة:', error);
+                alert('تعذر حذف السؤال. تحقق من اتصالك وصلاحيات قاعدة البيانات ثم حاول مجددًا.');
+            }
+        }
+
+        async function deleteAdminQuestionAnswer(questionId, answerId) {
+            if (!confirm('هل تريد حذف هذه الإجابة؟')) return;
+            try {
+                let questions = cachedAdminQuestions || JSON.parse(localStorage.getItem('app_questions') || '[]');
+                const question = questions.find(item => item.id === questionId);
+                if (!question) throw new Error('السؤال غير موجود.');
+                const answers = Array.isArray(question.answers) ? question.answers : [];
+                const answer = answers.find(item => item.id === answerId);
+                if (!answer) throw new Error('الإجابة غير موجودة أو حُذفت بالفعل.');
+
+                if (db) {
+                    await db.collection('questions').doc(questionId).update({answers: firebase.firestore.FieldValue.arrayRemove(answer)});
+                } else {
+                    question.answers = answers.filter(item => item.id !== answerId);
+                    questions = questions.map(item => item.id === questionId ? question : item);
+                    localStorage.setItem('app_questions', JSON.stringify(questions));
+                }
+
+                cachedAdminQuestions = questions.map(item => item.id === questionId
+                    ? {...item, answers: answers.filter(answerItem => answerItem.id !== answerId)}
+                    : item);
+                await renderAdminData(cachedAdminUsers, cachedAdminPosts, cachedAdminQuestions);
+            } catch (error) {
+                console.error('تعذر حذف الإجابة من لوحة الإدارة:', error);
+                alert('تعذر حذف الإجابة. تحقق من اتصالك وصلاحيات قاعدة البيانات ثم حاول مجددًا.');
+            }
+        }
+
+        async function renderAdminData(cloudUsers, cloudPosts, cloudQuestions) {
             if (cloudUsers) cachedAdminUsers = cloudUsers;
             if (cloudPosts) cachedAdminPosts = cloudPosts;
+            if (cloudQuestions) cachedAdminQuestions = cloudQuestions;
             const users = cloudUsers || cachedAdminUsers || JSON.parse(localStorage.getItem('app_users') || '[]');
             const posts = cloudPosts || cachedAdminPosts || JSON.parse(localStorage.getItem('app_posts') || '[]');
+            const questions = cloudQuestions || cachedAdminQuestions || JSON.parse(localStorage.getItem('app_questions') || '[]');
 
             // 1. جدول الحسابات
             const usersTbody = document.getElementById('usersTableBody');
@@ -524,10 +592,7 @@
 
             if (posts.length === 0) {
                 postsContainer.innerHTML = '<p class="text-xs text-gray-500 dark:text-gray-400 text-center py-4">لا توجد منشورات مرفوعة حالياً.</p>';
-                return;
-            }
-
-            posts.forEach(p => {
+            } else posts.forEach(p => {
                 const div = document.createElement('div');
                 // تمت إضافة كلاسات الدارك مود هنا للمنشورات
                 div.className = "border dark:border-neutral-700 rounded p-3 bg-gray-50 dark:bg-neutral-800/50 space-y-2 transition-colors";
@@ -563,6 +628,37 @@
                     </details>
                 `;
                 postsContainer.appendChild(div);
+            });
+
+            const questionsContainer = document.getElementById('adminQuestionsFeed');
+            const questionsStatus = document.getElementById('adminQuestionsStatus');
+            questionsContainer.innerHTML = '';
+            if (!questions.length) {
+                questionsStatus.textContent = 'لا توجد أسئلة مطروحة حالياً.';
+                return;
+            }
+
+            questionsStatus.textContent = `${questions.length} سؤال`;
+            questions.forEach(question => {
+                const card = document.createElement('article');
+                card.className = 'space-y-3 rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-neutral-700 dark:bg-neutral-800/50';
+                const questionId = escapeAdminHtml(question.id);
+                const imageUrl = safeAdminMediaUrl(question.imageURL, 'image');
+                const answers = Array.isArray(question.answers) ? question.answers : [];
+                card.innerHTML = `
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0 flex-1">
+                            <div class="flex flex-wrap items-center justify-between gap-2"><strong class="text-xs">${escapeAdminHtml(question.authorName || 'مستخدم')}</strong><time class="text-[10px] text-gray-500">${formatAdminTime(question.createdAt)}</time></div>
+                            <p class="mt-2 whitespace-pre-wrap break-words text-xs leading-relaxed">${escapeAdminHtml(question.text || '')}</p>
+                            ${imageUrl ? `<img src="${escapeAdminHtml(imageUrl)}" alt="صورة السؤال" class="mt-2 max-h-48 rounded border border-gray-200 object-contain dark:border-neutral-700">` : ''}
+                        </div>
+                        <button type="button" data-admin-delete-question="${questionId}" class="shrink-0 rounded-md bg-red-600 px-3 py-2 text-[10px] font-semibold text-white hover:bg-red-700">حذف السؤال</button>
+                    </div>
+                    <div class="border-t border-gray-200 pt-2 dark:border-neutral-700">
+                        <h3 class="mb-2 text-[11px] font-bold text-gray-700 dark:text-gray-200">الإجابات (${answers.length})</h3>
+                        ${answers.length ? `<div class="space-y-2">${answers.map(answer => `<div class="flex items-start justify-between gap-3 rounded border border-gray-200 bg-white p-2 dark:border-neutral-700 dark:bg-neutral-900"><div class="min-w-0"><div class="flex flex-wrap items-center justify-between gap-2"><strong class="text-[10px]">${escapeAdminHtml(answer.authorName || 'مستخدم')}</strong><time class="text-[9px] text-gray-500">${formatAdminTime(answer.createdAt)}</time></div><p class="mt-1 whitespace-pre-wrap break-words text-xs">${escapeAdminHtml(answer.text || '')}</p></div><button type="button" data-admin-delete-answer="${escapeAdminHtml(answer.id)}" data-question-id="${questionId}" class="shrink-0 rounded px-2 py-1 text-[10px] text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30">حذف الإجابة</button></div>`).join('')}</div>` : '<p class="text-[10px] text-gray-500">لا توجد إجابات.</p>'}
+                    </div>`;
+                questionsContainer.appendChild(card);
             });
         }
 
@@ -613,7 +709,16 @@
             db.collection('posts').onSnapshot(snapshot => {
                 const posts = [];
                 snapshot.forEach(doc => posts.push({id: doc.id, ...doc.data()}));
-                renderAdminData(cachedAdminUsers, posts);
+                renderAdminData(cachedAdminUsers, posts, cachedAdminQuestions);
+            });
+            db.collection('questions').orderBy('createdAt', 'desc').limit(100).onSnapshot(snapshot => {
+                const questions = [];
+                snapshot.forEach(doc => questions.push({id: doc.id, ...doc.data()}));
+                renderAdminData(cachedAdminUsers, cachedAdminPosts, questions);
+            }, error => {
+                console.error('تعذر تحميل الأسئلة في لوحة الإدارة:', error);
+                const status = document.getElementById('adminQuestionsStatus');
+                status.textContent = 'تعذر تحميل الأسئلة. تحقق من الاتصال وصلاحيات قاعدة البيانات.';
             });
         } else {
             renderAdminData();

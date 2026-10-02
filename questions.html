@@ -124,6 +124,7 @@
         let db = null;
         let firebaseAuthReady = Promise.resolve();
         let currentUser = null;
+        let cachedQuestions = [];
         let selectedQuestionImage = null;
         let selectedQuestionPreviewUrl = null;
         let isPublishingQuestion = false;
@@ -247,6 +248,7 @@
         }
 
         function renderQuestions(questions) {
+            cachedQuestions = questions;
             const feed = document.getElementById('questionsFeed');
             const status = document.getElementById('questionsStatus');
             const openQuestionIds = new Set(Array.from(feed.querySelectorAll('details[data-question-id][open]'), details => details.dataset.questionId));
@@ -266,22 +268,20 @@
                 const authorName = AppSecurity.escapeHtml(question.authorName || 'مستخدم');
                 const imageURL = AppSecurity.safeImageUrl(question.imageURL);
                 const answers = Array.isArray(question.answers) ? question.answers : [];
-                const canManageQuestion = currentUser && (currentUser.role === 'admin' || currentUser.id === question.authorId);
+                const saved = getSavedQuestionIds().includes(questionKey);
                 const answerDraft = AppSecurity.escapeHtml(answerDrafts.get(questionKey) || '');
                 const answersMarkup = answers.map(answer => {
                     const answerName = AppSecurity.escapeHtml(answer.authorName || 'مستخدم');
-                    const canDeleteAnswer = canManageQuestion || (currentUser && currentUser.id === answer.authorId);
                     return `<article class="flex items-start gap-2 border-b border-gray-100 py-3 last:border-0 dark:border-neutral-800">
                         ${questionAvatarMarkup(answer.authorPhotoURL, answer.authorName || 'مستخدم')}
                         <div class="min-w-0 flex-1"><div class="flex flex-wrap items-center justify-between gap-2"><strong class="text-xs">${answerName}</strong><time class="text-[10px] text-gray-400">${formatQuestionTime(answer.createdAt)}</time></div><p class="mt-1 whitespace-pre-wrap break-words text-xs leading-relaxed text-gray-700 dark:text-gray-300">${AppSecurity.escapeHtml(answer.text || '')}</p></div>
-                        ${canDeleteAnswer ? `<button type="button" data-delete-answer-question="${questionId}" data-delete-answer-id="${AppSecurity.escapeHtml(answer.id || '')}" class="shrink-0 rounded px-2 py-1 text-[10px] text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30">حذف</button>` : ''}
                     </article>`;
                 }).join('');
                 return `<article class="question-card overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
                     <div class="flex items-start gap-3 p-4">
                         ${questionAvatarMarkup(question.authorPhotoURL, question.authorName || 'مستخدم')}
                         <div class="min-w-0 flex-1">
-                            <div class="flex flex-wrap items-center justify-between gap-2"><strong class="text-xs">${authorName}</strong><div class="flex items-center gap-2"><time class="text-[10px] text-gray-400">${formatQuestionTime(question.createdAt)}</time>${canManageQuestion ? `<button type="button" data-delete-question-id="${questionId}" class="rounded px-2 py-1 text-[10px] text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30">حذف السؤال</button>` : ''}</div></div>
+                            <div class="flex flex-wrap items-center justify-between gap-2"><strong class="text-xs">${authorName}</strong><div class="flex items-center gap-2"><time class="text-[10px] text-gray-400">${formatQuestionTime(question.createdAt)}</time><button type="button" data-toggle-saved-question="${questionId}" class="rounded px-2 py-1 text-[10px] ${saved ? 'text-blue-700 dark:text-blue-300' : 'text-gray-500 dark:text-gray-400'}">${saved ? 'إزالة من المحفوظات' : 'حفظ السؤال'}</button></div></div>
                             <p class="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed">${AppSecurity.escapeHtml(question.text || '')}</p>
                         </div>
                     </div>
@@ -317,73 +317,27 @@
             return result.secure_url;
         }
 
-        function canManageQuestion(question) {
-            return Boolean(currentUser && question && (currentUser.role === 'admin' || currentUser.id === question.authorId));
-        }
-
-        async function getQuestionForDeletion(questionId) {
-            if (!db) return getLocalQuestions().find(question => question.id === questionId) || null;
-            const snapshot = await db.collection('questions').doc(questionId).get();
-            return snapshot.exists ? {id: snapshot.id, ...snapshot.data()} : null;
-        }
-
-        async function deleteQuestion(questionId) {
+        function getSavedQuestionIds() {
             try {
-                const question = await getQuestionForDeletion(questionId);
-                if (!question) throw new Error('السؤال غير موجود.');
-                if (!canManageQuestion(question)) {
-                    alert('يمكن لصاحب السؤال أو المسؤول فقط حذفه.');
-                    return;
-                }
-                if (!confirm('هل تريد حذف السؤال وجميع إجاباته؟')) return;
-                if (db) {
-                    await db.collection('questions').doc(questionId).delete();
-                } else {
-                    const questions = getLocalQuestions().filter(item => item.id !== questionId);
-                    localStorage.setItem('app_questions', JSON.stringify(questions));
-                    renderQuestions(questions);
-                }
-            } catch (error) {
-                console.error('تعذر حذف السؤال:', error);
-                alert('تعذر حذف السؤال. تحقق من الاتصال والصلاحيات ثم حاول مجددًا.');
+                const ids = JSON.parse(localStorage.getItem('bookmarked_questions') || '[]');
+                return Array.isArray(ids) ? ids : [];
+            } catch (_) {
+                return [];
             }
         }
 
-        async function deleteQuestionAnswer(questionId, answerId) {
-            try {
-                const question = await getQuestionForDeletion(questionId);
-                if (!question) throw new Error('السؤال غير موجود.');
-                const answers = Array.isArray(question.answers) ? question.answers : [];
-                const answer = answers.find(item => item.id === answerId);
-                if (!answer) throw new Error('الإجابة غير موجودة.');
-                const canDelete = canManageQuestion(question) || (currentUser && currentUser.id === answer.authorId);
-                if (!canDelete) {
-                    alert('يمكن لصاحب الإجابة أو صاحب السؤال أو المسؤول حذفها فقط.');
-                    return;
-                }
-                if (!confirm('هل تريد حذف هذه الإجابة؟')) return;
-                if (db) {
-                    await db.collection('questions').doc(questionId).update({answers: firebase.firestore.FieldValue.arrayRemove(answer)});
-                } else {
-                    question.answers = answers.filter(item => item.id !== answerId);
-                    const questions = getLocalQuestions().map(item => item.id === questionId ? question : item);
-                    localStorage.setItem('app_questions', JSON.stringify(questions));
-                    renderQuestions(questions);
-                }
-            } catch (error) {
-                console.error('تعذر حذف الإجابة:', error);
-                alert('تعذر حذف الإجابة. تحقق من الاتصال والصلاحيات ثم حاول مجددًا.');
-            }
+        function toggleQuestionBookmark(questionId) {
+            const savedIds = getSavedQuestionIds();
+            const nextIds = savedIds.includes(questionId)
+                ? savedIds.filter(id => id !== questionId)
+                : [...savedIds, questionId];
+            localStorage.setItem('bookmarked_questions', JSON.stringify(nextIds));
+            renderQuestions(cachedQuestions);
         }
 
         document.getElementById('questionsFeed').addEventListener('click', event => {
-            const questionButton = event.target.closest('[data-delete-question-id]');
-            if (questionButton) {
-                deleteQuestion(questionButton.dataset.deleteQuestionId);
-                return;
-            }
-            const answerButton = event.target.closest('[data-delete-answer-id]');
-            if (answerButton) deleteQuestionAnswer(answerButton.dataset.deleteAnswerQuestion, answerButton.dataset.deleteAnswerId);
+            const button = event.target.closest('[data-toggle-saved-question]');
+            if (button) toggleQuestionBookmark(button.dataset.toggleSavedQuestion);
         });
 
         document.getElementById('questionForm').addEventListener('submit', async event => {
