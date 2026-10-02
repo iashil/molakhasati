@@ -1,0 +1,12 @@
+{
+  "name": "molakhasati-site-build",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "minify": "node scripts/minify-site.mjs"
+  },
+  "devDependencies": {
+    "html-minifier-terser": "^7.2.0",
+    "terser": "^5.31.0"
+  }
+}
