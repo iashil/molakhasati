@@ -536,7 +536,7 @@
                 let users = [];
                 if (db && firebaseConfigured) {
                     await firebaseAuthReady;
-                    const snapshot = await db.collection('users').limit(30).get();
+                    const snapshot = await db.collection('users').where('role', '!=', 'guest').limit(100).get();
                     snapshot.forEach(doc => {
                         const user = {id: doc.id, ...doc.data()};
                         userProfiles[user.id] = user;
@@ -546,7 +546,7 @@
                     users = JSON.parse(localStorage.getItem('app_users') || '[]');
                 }
 
-                users = users.filter(user => user.id && String(user.id) !== String(currentUser.id) && user.status !== 'banned');
+                users = users.filter(user => user.id && String(user.id) !== String(currentUser.id) && user.status !== 'banned' && user.isGuest !== true && user.role !== 'guest');
                 renderDiscoverUsers(users.slice(0, 24));
             } catch (error) {
                 console.error('تعذر تحميل شريط المستخدمين:', error);
@@ -563,7 +563,7 @@
             }
             currentUser = JSON.parse(userStr);
             startPresenceTracking(db, currentUser);
-            document.getElementById('userNameDisplay').textContent = currentUser.name || 'حسابي';
+            document.getElementById('userNameDisplay').textContent = AppSecurity.isGuest(currentUser) ? 'ضيف' : (currentUser.name || 'حسابي');
 
             if (currentUser.role === 'admin') {
                 document.getElementById('adminLinkContainer').innerHTML = `
@@ -797,6 +797,7 @@
         }
 
         async function createNewPost() {
+            if (AppSecurity.isGuest(currentUser)) return;
             if (isSubmittingPost) return;
             const text = document.getElementById('postText').value.trim();
             const grade = document.getElementById('newPostGrade').value;
@@ -1197,12 +1198,12 @@
                 return;
             }
             try {
-                const snapshot = await db.collection('users').limit(50).get();
+                const snapshot = await db.collection('users').where('role', '!=', 'guest').limit(100).get();
                 const users = [];
                 snapshot.forEach(doc => {
                     const user = {id: doc.id, ...doc.data()};
                     userProfiles[user.id] = user;
-                    if (!query || String(user.name || '').toLowerCase().includes(query)) users.push(user);
+                    if (!user.isGuest && user.role !== 'guest' && (!query || String(user.name || '').toLowerCase().includes(query))) users.push(user);
                 });
                 results.innerHTML = users.length ? users.map(user => {
                     const photo = getSafeProfileImageUrl(user.photoURL || '');

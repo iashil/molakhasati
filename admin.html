@@ -387,15 +387,18 @@
         // تغيير حالة المستخدم (حظر / تفعيل)
         async function toggleUserStatus(userId) {
             const users = JSON.parse(localStorage.getItem('app_users') || '[]');
-            const user = users.find(u => u.id === userId);
+            const user = (cachedAdminUsers || []).find(u => String(u.id) === String(userId)) || users.find(u => String(u.id) === String(userId));
             if (user) {
                 if (user.id === currentUser.id) {
                     alert('لا يمكنك حظر حسابك الحالي!');
                     return;
                 }
-                user.status = (user.status === 'banned') ? 'active' : 'banned';
+                const nextStatus = (user.status === 'banned') ? 'active' : 'banned';
+                user.status = nextStatus;
+                const localUser = users.find(item => String(item.id) === String(userId));
+                if (localUser) localUser.status = nextStatus;
                 localStorage.setItem('app_users', JSON.stringify(users));
-                if (db) await db.collection('users').doc(userId).set({status: user.status}, {merge: true});
+                if (db) await db.collection('users').doc(userId).set({status: nextStatus}, {merge: true});
                 renderAdminData();
             }
         }
@@ -565,17 +568,28 @@
             const users = cloudUsers || cachedAdminUsers || JSON.parse(localStorage.getItem('app_users') || '[]');
             const posts = cloudPosts || cachedAdminPosts || JSON.parse(localStorage.getItem('app_posts') || '[]');
             const questions = cloudQuestions || cachedAdminQuestions || JSON.parse(localStorage.getItem('app_questions') || '[]');
+            const guestUsers = users
+                .filter(user => user.isGuest === true || user.role === 'guest')
+                .sort((left, right) => {
+                    const getCreatedTime = user => user.createdAt && typeof user.createdAt.toMillis === 'function'
+                        ? user.createdAt.toMillis()
+                        : new Date(user.createdAt || user.lastLoginAt || 0).getTime();
+                    return getCreatedTime(left) - getCreatedTime(right) || String(left.id).localeCompare(String(right.id));
+                });
+            const guestNumbers = new Map(guestUsers.map((user, index) => [String(user.id), index + 1]));
 
             // 1. جدول الحسابات
             const usersTbody = document.getElementById('usersTableBody');
             usersTbody.innerHTML = '';
             users.forEach(u => {
                 const tr = document.createElement('tr');
+                const isGuest = u.isGuest === true || u.role === 'guest';
+                const displayName = isGuest ? `الضيف ${guestNumbers.get(String(u.id))}` : (u.name || 'بدون اسم');
                 // تمت إضافة كلاسات الدارك مود هنا
                 tr.innerHTML = `
-                    <td class="p-2 font-medium">${escapeAdminHtml(u.name || 'بدون اسم')}</td>
-                    <td class="p-2 text-gray-500 dark:text-gray-400" dir="ltr">${escapeAdminHtml(u.email || 'غير متوفر')}</td>
-                    <td class="p-2"><span class="px-1.5 py-0.5 rounded text-[10px] ${u.role === 'admin' ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300' : 'bg-gray-100 text-gray-700 dark:bg-neutral-700 dark:text-gray-300'}">${escapeAdminHtml(u.role || 'user')}</span></td>
+                    <td class="p-2 font-medium">${escapeAdminHtml(displayName)}</td>
+                    <td class="p-2 text-gray-500 dark:text-gray-400" dir="ltr">${isGuest ? '—' : escapeAdminHtml(u.email || 'غير متوفر')}</td>
+                    <td class="p-2"><span class="px-1.5 py-0.5 rounded text-[10px] ${u.role === 'admin' ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300' : 'bg-gray-100 text-gray-700 dark:bg-neutral-700 dark:text-gray-300'}">${isGuest ? 'ضيف' : escapeAdminHtml(u.role || 'user')}</span></td>
                     <td class="p-2" data-user-presence="${escapeAdminHtml(u.id)}">${getAdminPresenceMarkup(u)}</td>
                     <td class="p-2 text-gray-500 dark:text-gray-400" dir="ltr">${formatAdminTime(u.lastSeenAt || u.lastLoginAt)}</td>
                     <td class="p-2 space-x-2 space-x-reverse">

@@ -342,6 +342,7 @@
 
         document.getElementById('questionForm').addEventListener('submit', async event => {
             event.preventDefault();
+            if (AppSecurity.isGuest(currentUser)) return;
             if (isPublishingQuestion) return;
             const text = document.getElementById('questionText').value.trim();
             if (!text || text.length > 500) {
@@ -386,6 +387,7 @@
         });
 
         document.getElementById('questionsFeed').addEventListener('submit', async event => {
+            if (AppSecurity.isGuest(currentUser)) return;
             const form = event.target.closest('[data-answer-form]');
             if (!form) return;
             event.preventDefault();

@@ -22,6 +22,26 @@
         const updatePresence = async function() {
             if (document.visibilityState === 'hidden') return;
 
+            if (user.isGuest === true || user.role === 'guest') {
+                if (user.status === 'banned') {
+                    localStorage.removeItem('current_user');
+                    global.location.replace('login.html');
+                    return;
+                }
+                if (db) {
+                    try {
+                        const guestDoc = await db.collection('users').doc(user.id).get();
+                        if (!guestDoc.exists || guestDoc.data().status === 'banned') {
+                            localStorage.removeItem('current_user');
+                            global.location.replace('login.html');
+                            return;
+                        }
+                    } catch (error) {
+                        console.error('تعذر التحقق من حالة حساب الضيف:', error);
+                    }
+                }
+            }
+
             const lastSeenAt = new Date().toISOString();
             try {
                 saveLocalPresence(user.id, lastSeenAt);
