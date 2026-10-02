@@ -327,7 +327,7 @@
         }
 
         function toggleQuestionBookmark(questionId) {
-            if (AppSecurity.isGuest(currentUser)) return;
+            if (AppSecurity.notifyGuestAction('الحفظ', currentUser)) return;
             const savedIds = getSavedQuestionIds();
             const nextIds = savedIds.includes(questionId)
                 ? savedIds.filter(id => id !== questionId)
@@ -343,7 +343,7 @@
 
         document.getElementById('questionForm').addEventListener('submit', async event => {
             event.preventDefault();
-            if (AppSecurity.isGuest(currentUser)) return;
+            if (AppSecurity.notifyGuestAction('طرح سؤال', currentUser)) return;
             if (isPublishingQuestion) return;
             const text = document.getElementById('questionText').value.trim();
             if (!text || text.length > 500) {
@@ -388,10 +388,10 @@
         });
 
         document.getElementById('questionsFeed').addEventListener('submit', async event => {
-            if (AppSecurity.isGuest(currentUser)) return;
             const form = event.target.closest('[data-answer-form]');
             if (!form) return;
             event.preventDefault();
+            if (AppSecurity.notifyGuestAction('إرسال إجابة', currentUser)) return;
             const input = form.elements.answerText;
             const text = input.value.trim();
             const button = form.querySelector('button[type="submit"]');
@@ -438,6 +438,10 @@
             }
             try {
                 currentUser = JSON.parse(rawUser);
+                if (AppSecurity.isGuest(currentUser) && currentUser.name === 'ضيف') {
+                    currentUser.name = '';
+                    localStorage.setItem('current_user', JSON.stringify(currentUser));
+                }
             } catch (_) {
                 localStorage.removeItem('current_user');
                 window.location.href = 'login.html';
@@ -465,7 +469,11 @@
                     const userDoc = await db.collection('users').doc(currentUser.id).get();
                     if (userDoc.exists) {
                         const profile = userDoc.data() || {};
-                        currentUser = {...currentUser, name: profile.name || currentUser.name, photoURL: profile.photoURL || currentUser.photoURL || ''};
+                        currentUser = {
+                            ...currentUser,
+                            name: AppSecurity.isGuest(currentUser) ? '' : (profile.name || currentUser.name),
+                            photoURL: profile.photoURL || currentUser.photoURL || ''
+                        };
                         localStorage.setItem('current_user', JSON.stringify(currentUser));
                         document.getElementById('currentUserName').textContent = currentUser.name || 'حسابي';
                         document.getElementById('sidebarUserName').textContent = currentUser.name || 'حسابي';

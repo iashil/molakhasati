@@ -26,8 +26,6 @@ function renderCommentItem(comment) {
 }
 
 function renderPostComments(post) {
-    if (window.AppSecurity && window.AppSecurity.isGuest(commentsUser)) return '';
-
     const comments = Array.isArray(post.comments) ? post.comments : [];
     const commentsMarkup = comments.length
         ? comments.map(renderCommentItem).join('')
@@ -55,10 +53,10 @@ function renderPostComments(post) {
 }
 
 document.addEventListener('submit', async event => {
-    if (window.AppSecurity && window.AppSecurity.isGuest(commentsUser)) return;
     const form = event.target.closest('[data-comment-form]');
     if (!form) return;
     event.preventDefault();
+    if (window.AppSecurity && window.AppSecurity.notifyGuestAction('إرسال تعليق', commentsUser)) return;
 
     const input = form.elements.commentText;
     const text = input.value.trim();

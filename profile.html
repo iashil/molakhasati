@@ -239,8 +239,10 @@
 
         function renderProfile() {
             if (!profileData) return;
-            const canEditProfile = isOwnProfile && !AppSecurity.isGuest(loggedInUser);
-            document.getElementById('profileName').textContent = profileData.name || loggedInUser.name;
+            const canEditProfile = isOwnProfile;
+            document.getElementById('profileName').textContent = AppSecurity.isGuest(loggedInUser)
+                ? 'حسابي'
+                : (profileData.name || loggedInUser.name);
             document.getElementById('bioInput').value = profileData.bio || '';
             document.getElementById('bioDisplay').textContent = profileData.bio || 'لا توجد نبذة شخصية.';
             document.getElementById('bioInput').classList.toggle('hidden', !canEditProfile);
@@ -253,7 +255,6 @@
         }
 
         document.getElementById('profileImageInput').addEventListener('change', async event => {
-            if (AppSecurity.isGuest(loggedInUser)) return;
             const file = event.target.files[0];
             if (!file) return;
             if (!/^image\/(?:png|jpeg|webp|gif)$/i.test(file.type) || file.size > 10 * 1024 * 1024) {
@@ -283,11 +284,11 @@
         });
 
         async function saveProfile() {
-            if (AppSecurity.isGuest(loggedInUser)) return;
             const button = document.getElementById('saveProfileButton');
             const status = document.getElementById('profileStatus');
             const user = profileData;
             const bio = document.getElementById('bioInput').value.trim();
+            if (bio !== (user && user.bio || '') && AppSecurity.notifyGuestAction('وضع بايو', loggedInUser)) return;
             button.disabled = true;
             status.textContent = 'جارٍ الحفظ...';
             try {
