@@ -187,6 +187,10 @@
                         <span class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-lg text-gray-700 dark:bg-neutral-800 dark:text-gray-200">📝</span>
                         <span>منشوراتي</span>
                     </a>
+                    <a href="questions.html" data-sidebar-item="questions" class="sidebar-item-enter flex items-center gap-3 rounded-xl px-3 py-3 font-medium text-sm text-gray-700 dark:text-gray-200 transition hover:bg-gray-100 dark:hover:bg-neutral-800">
+                        <span class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-lg text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">؟</span>
+                        <span>طرح سؤال</span>
+                    </a>
                 </nav>
 
                 <div class="mt-auto pt-4">
@@ -391,6 +395,27 @@
             return AppSecurity.safeImageUrl(rawUrl) || defaultAvatar;
         }
 
+        function getProfilePhotoCandidates(user) {
+            return [user && user.photoURL, user && user.image, user && user.avatarURL, user && user.profileImage, user && user.avatar]
+                .map(value => AppSecurity.safeImageUrl(value))
+                .filter((value, index, values) => value && values.indexOf(value) === index);
+        }
+
+        function setProfileAvatarImage(image, user, altText) {
+            const candidates = getProfilePhotoCandidates(user);
+            let candidateIndex = 0;
+            image.alt = altText || '';
+            image.onerror = () => {
+                if (candidateIndex < candidates.length) {
+                    image.src = candidates[candidateIndex++];
+                    return;
+                }
+                image.onerror = null;
+                image.src = defaultAvatar;
+            };
+            image.src = candidates.length ? candidates[candidateIndex++] : defaultAvatar;
+        }
+
         function escapeHtml(value) {
             return String(value ?? '').replace(/[&<>'"]/g, character => ({
                 '&': '&amp;',
@@ -421,23 +446,18 @@
             }
 
             const safeName = safeUser.name || 'حسابي';
-            const safePhoto = getSafeProfileImageUrl(safeUser.photoURL || safeUser.image || '');
             sidebarProfile.href = 'profile.html';
             sidebarProfile.setAttribute('data-sidebar-item', 'profile');
             sidebarProfile.innerHTML = `
-                <img src="${safePhoto}" alt="صورة المستخدم" class="h-10 w-10 rounded-full object-cover border border-gray-200 dark:border-neutral-700" onerror="this.onerror=null;this.src='${defaultAvatar}';">
+                <img src="${defaultAvatar}" alt="" class="h-10 w-10 rounded-full object-cover border border-gray-200 dark:border-neutral-700">
                 <span class="truncate">${escapeHtml(safeName)}</span>
             `;
             const bottomProfileLink = document.getElementById('bottomProfileLink');
             const bottomProfileAvatar = document.getElementById('bottomProfileAvatar');
             bottomProfileLink.href = 'profile.html';
             bottomProfileLink.title = `الملف الشخصي: ${safeName}`;
-            bottomProfileAvatar.src = safePhoto;
-            bottomProfileAvatar.alt = `صورة ${safeName}`;
-            bottomProfileAvatar.onerror = () => {
-                bottomProfileAvatar.onerror = null;
-                bottomProfileAvatar.src = defaultAvatar;
-            };
+            setProfileAvatarImage(sidebarProfile.querySelector('img'), safeUser, `صورة ${safeName}`);
+            setProfileAvatarImage(bottomProfileAvatar, safeUser, `صورة ${safeName}`);
         }
 
         async function loadSidebarUser() {
@@ -447,9 +467,10 @@
             }
 
             const localUser = {
+                ...currentUser,
                 id: currentUser.id,
                 name: currentUser.name || 'حسابي',
-                photoURL: currentUser.photoURL || ''
+                photoURL: currentUser.photoURL || currentUser.image || currentUser.avatarURL || currentUser.profileImage || currentUser.avatar || ''
             };
             renderSidebarUser(localUser);
 
@@ -465,12 +486,17 @@
                 }
 
                 const firestoreUser = userDoc.data() || {};
+                const photoURL = firestoreUser.photoURL || firestoreUser.image || firestoreUser.avatarURL || firestoreUser.profileImage || firestoreUser.avatar || currentUser.photoURL || currentUser.image || currentUser.avatarURL || currentUser.profileImage || currentUser.avatar || '';
                 const nextUser = {
+                    ...currentUser,
                     id: currentUser.id,
                     name: firestoreUser.name || currentUser.name || 'حسابي',
-                    photoURL: firestoreUser.photoURL || currentUser.photoURL || ''
+                    photoURL: photoURL,
+                    image: firestoreUser.image || currentUser.image || ''
                 };
 
+                currentUser = {...currentUser, name: nextUser.name, photoURL};
+                localStorage.setItem('current_user', JSON.stringify(currentUser));
                 renderSidebarUser(nextUser);
             } catch (error) {
                 console.error('فشل تحميل بيانات المستخدم في الـ Sidebar:', error);
@@ -943,7 +969,10 @@
                                         <img src="${safeImg}" alt="صورة منشور" class="w-full h-32 object-cover rounded-lg border border-gray-200 dark:border-neutral-700">
                                         <div class="flex items-center justify-between gap-2 px-1">
                                             <a href="${safeImg}" target="_blank" rel="noopener" class="text-[10px] text-blue-700 dark:text-blue-400 underline">عرض</a>
-                                            <a href="${downloadHref}" download="${escapeHtml(imageName)}" class="inline-flex items-center gap-1 text-[10px] text-blue-700 dark:text-blue-400 underline">⬇ تحميل</a>
+                                            <button type="button" data-download-image="${escapeHtml(safeImg)}" data-download-name="${escapeHtml(imageName)}" class="inline-flex items-center gap-1 text-[10px] text-blue-700 dark:text-blue-400 underline">
+                                                <svg aria-hidden="true" viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v3h14v-3"/></svg>
+                                                تحميل
+                                            </button>
                                         </div>
                                     </div>
                                 `;
@@ -990,6 +1019,88 @@
             }
             console.log('Cloudinary upload successful:', result.secure_url);
             return result.secure_url;
+        }
+
+        async function downloadImageWithWatermark(sourceUrl, fileName, button) {
+            const safeUrl = AppSecurity.safeImageUrl(sourceUrl);
+            if (!safeUrl) {
+                showAppToast('تعذر تجهيز الصورة للتنزيل.', true);
+                return;
+            }
+
+            const originalContent = button.innerHTML;
+            button.disabled = true;
+            button.textContent = 'جارٍ التجهيز...';
+            let bitmapUrl = null;
+            let downloadUrl = null;
+            try {
+                const response = await fetch(safeUrl, {mode: 'cors', credentials: 'omit'});
+                if (!response.ok) throw new Error('تعذر جلب الصورة من مصدرها.');
+                const sourceBlob = await response.blob();
+                if (!sourceBlob.type.startsWith('image/')) throw new Error('المصدر ليس ملف صورة صالحاً.');
+
+                let image;
+                if (typeof createImageBitmap === 'function') {
+                    image = await createImageBitmap(sourceBlob);
+                } else {
+                    bitmapUrl = URL.createObjectURL(sourceBlob);
+                    image = new Image();
+                    image.src = bitmapUrl;
+                    await image.decode();
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = image.width || image.naturalWidth;
+                canvas.height = image.height || image.naturalHeight;
+                const context = canvas.getContext('2d');
+                if (!context || !canvas.width || !canvas.height) throw new Error('تعذر إنشاء نسخة قابلة للتنزيل.');
+                context.drawImage(image, 0, 0);
+                if (typeof image.close === 'function') image.close();
+
+                const fontSize = Math.max(12, Math.min(42, Math.round(canvas.width * 0.022)));
+                const padding = Math.ceil(fontSize * 0.55);
+                const margin = Math.max(8, Math.ceil(fontSize * 0.65));
+                const watermark = 'منصة ملخصاتي';
+                context.font = `600 ${fontSize}px Arial, sans-serif`;
+                context.direction = 'rtl';
+                context.textAlign = 'right';
+                context.textBaseline = 'top';
+                const textWidth = context.measureText(watermark).width;
+                const boxWidth = textWidth + padding * 2;
+                const boxHeight = fontSize + padding * 2;
+                context.fillStyle = 'rgba(15, 23, 42, 0.58)';
+                context.fillRect(canvas.width - margin - boxWidth, margin, boxWidth, boxHeight);
+                context.fillStyle = 'rgba(255, 255, 255, 0.92)';
+                context.fillText(watermark, canvas.width - margin - padding, margin + padding);
+
+                const outputType = ['image/jpeg', 'image/png', 'image/webp'].includes(sourceBlob.type)
+                    ? sourceBlob.type
+                    : 'image/png';
+                const outputBlob = await new Promise((resolve, reject) => {
+                    canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('تعذر تصدير الصورة.')), outputType, 0.94);
+                });
+                const actualOutputType = ['image/jpeg', 'image/png', 'image/webp'].includes(outputBlob.type)
+                    ? outputBlob.type
+                    : 'image/png';
+                downloadUrl = URL.createObjectURL(outputBlob);
+                const extension = actualOutputType === 'image/jpeg' ? 'jpg' : actualOutputType.split('/')[1];
+                const baseName = (fileName || 'molakhasati-image').replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_');
+                const anchor = document.createElement('a');
+                anchor.href = downloadUrl;
+                anchor.download = `${baseName}-molakhasati.${extension}`;
+                document.body.appendChild(anchor);
+                anchor.click();
+                anchor.remove();
+                setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+                showAppToast('تم تجهيز الصورة بعلامة منصة ملخصاتي.');
+            } catch (error) {
+                console.error('تعذر تنزيل الصورة بعلامة مائية:', error);
+                showAppToast('تعذر تجهيز الصورة. تحقق من اتصال المصدر أو صلاحية CORS.', true);
+            } finally {
+                if (bitmapUrl) URL.revokeObjectURL(bitmapUrl);
+                button.disabled = false;
+                button.innerHTML = originalContent;
+            }
         }
 
         function renderPosts() {
@@ -1042,6 +1153,11 @@
         }
 
         document.getElementById('postsFeed').addEventListener('click', event => {
+            const downloadButton = event.target.closest('[data-download-image]');
+            if (downloadButton) {
+                downloadImageWithWatermark(downloadButton.dataset.downloadImage, downloadButton.dataset.downloadName, downloadButton);
+                return;
+            }
             const button = event.target.closest('[data-bookmark-id]');
             if (button) toggleBookmark(button.dataset.bookmarkId);
         });
