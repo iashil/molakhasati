@@ -132,6 +132,11 @@
             <p id="profileStatus" class="text-xs text-center mt-3"></p>
         </section>
 
+        <section class="bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg p-4">
+            <h3 class="text-xs font-bold text-gray-700 dark:text-gray-200 mb-3">إحصاءات الملف</h3>
+            <div id="profileStats" class="space-y-2"></div>
+        </section>
+
         <section class="bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg">
             <div class="flex border-b border-gray-200 dark:border-neutral-700">
                 <button id="postsTab" onclick="showTab('posts')" class="flex-1 py-3 text-xs font-bold border-b-2 border-gray-900 dark:border-white">منشوراتي</button>
@@ -230,11 +235,82 @@
                 cloudPosts = [];
                 snapshot.forEach(doc => cloudPosts.push({id: doc.id, ...doc.data()}));
                 renderPosts(activeTab);
+                renderProfileStats();
             }, error => console.error('تعذر جلب منشورات البروفايل:', error));
         }
 
         function escapeHtml(value) {
             return String(value || '').replace(/[&<>'"]/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[character]));
+        }
+
+        async function getUserStatsForProfile(userId) {
+            const posts = JSON.parse(localStorage.getItem('app_posts') || '[]');
+            const questions = JSON.parse(localStorage.getItem('app_questions') || '[]');
+            let userPosts = (cloudPosts || posts).filter(post => String(post.authorId) === String(userId));
+            let userQuestions = questions.filter(question => String(question.authorId) === String(userId));
+
+            if (firestore) {
+                try {
+                    await firebaseAuthReady;
+                    const [postSnapshot, questionSnapshot] = await Promise.all([
+                        firestore.collection('posts').where('authorId', '==', String(userId)).get(),
+                        firestore.collection('questions').where('authorId', '==', String(userId)).get()
+                    ]);
+                    userPosts = postSnapshot.docs.map(doc => doc.data());
+                    userQuestions = questionSnapshot.docs.map(doc => doc.data());
+                } catch (error) {
+                    console.error('تعذر تحميل إحصاءات الملف من Firebase:', error);
+                }
+            }
+
+            const answerCount = userQuestions.reduce((total, question) => {
+                if (!Array.isArray(question.answers)) return total;
+                return total + question.answers.filter(answer => String(answer.authorId) === String(userId)).length;
+            }, 0);
+            const likeTotal = userPosts.reduce((total, post) => total + (Number(post.likeCount) || (Array.isArray(post.likedBy) ? post.likedBy.length : Number(post.likes) || 0)), 0);
+            const savedPosts = JSON.parse(localStorage.getItem('bookmarked_posts') || '[]');
+            const savedCount = String(userId) === String(loggedInUser && loggedInUser.id) ? savedPosts.length : 0;
+            return {
+                posts: userPosts.length,
+                questions: userQuestions.length,
+                answers: answerCount,
+                likes: likeTotal,
+                saved: savedCount
+            };
+        }
+
+        async function renderProfileStats() {
+            const statsContainer = document.getElementById('profileStats');
+            if (!statsContainer) return;
+            statsContainer.innerHTML = '<p class="text-xs text-gray-500 dark:text-gray-400">جارٍ تحميل الإحصاءات...</p>';
+            const stats = await getUserStatsForProfile(viewedUserId || (loggedInUser && loggedInUser.id));
+            const cards = [
+                {label: 'منشورات', key: 'posts', icon: '▤', tone: 'blue'},
+                {label: 'أسئلة', key: 'questions', icon: '؟', tone: 'amber'},
+                {label: 'إجابات', key: 'answers', icon: '↩', tone: 'green'},
+                {label: 'إعجابات', key: 'likes', icon: '♡', tone: 'rose'}
+            ];
+            if (isOwnProfile) cards.push({label: 'محفوظات', key: 'saved', icon: '▣', tone: 'violet'});
+            const tones = {
+                blue: 'border-t-blue-500 bg-blue-50 dark:bg-blue-950/30',
+                amber: 'border-t-amber-500 bg-amber-50 dark:bg-amber-950/30',
+                green: 'border-t-emerald-500 bg-emerald-50 dark:bg-emerald-950/30',
+                rose: 'border-t-rose-500 bg-rose-50 dark:bg-rose-950/30',
+                violet: 'border-t-violet-500 bg-violet-50 dark:bg-violet-950/30'
+            };
+            statsContainer.innerHTML = `
+                <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                    ${cards.map(card => `
+                        <article class="min-h-28 rounded-lg border border-gray-200 border-t-2 p-3 dark:border-neutral-700 ${tones[card.tone]}">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-[11px] font-semibold text-gray-600 dark:text-gray-300">${card.label}</span>
+                                <span aria-hidden="true" class="flex h-7 w-7 items-center justify-center rounded-full bg-white/80 text-sm dark:bg-neutral-900/70">${card.icon}</span>
+                            </div>
+                            <p class="mt-3 text-2xl font-bold leading-none text-gray-900 dark:text-white">${stats[card.key] || 0}</p>
+                        </article>
+                    `).join('')}
+                </div>
+            `;
         }
 
         function renderProfile() {
@@ -251,6 +327,7 @@
             document.getElementById('saveProfileButton').classList.toggle('hidden', !canEditProfile);
             document.getElementById('bioDisplay').classList.toggle('hidden', canEditProfile);
             document.getElementById('profileImage').src = AppSecurity.safeImageUrl(profileData.photoURL) || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="96" height="96"%3E%3Crect width="100%25" height="100%25" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="55%25" text-anchor="middle" font-size="40"%3E%F0%9F%91%A4%3C/text%3E%3C/svg%3E';
+            renderProfileStats();
             renderPosts('posts');
         }
 
