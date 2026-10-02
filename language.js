@@ -25,7 +25,7 @@
         '🚪 خروج': '🚪 Sign out',
         'إدارة': 'Admin',
         'الإدارة': 'Admin',
-        'Meta AI': 'Meta AI',
+        'ChatGPT': 'ChatGPT',
         'تغيير لون الخلفية': 'Toggle dark mode',
         'الوضع الداكن': 'Dark mode',
         'الوضع الفاتح': 'Light mode',
