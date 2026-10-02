@@ -120,7 +120,7 @@
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">الملف الشخصي</p>
                     <label id="profileImageEdit" class="inline-block mt-3 text-xs text-blue-700 dark:text-blue-400 hover:underline cursor-pointer">
                         اختيار صورة شخصية
-                        <input id="profileImageInput" type="file" accept="image/*" class="hidden">
+                        <input id="profileImageInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden">
                     </label>
                     <p id="imageStatus" class="text-[10px] text-gray-500 mt-1"></p>
                 </div>
@@ -149,6 +149,8 @@
     </div>
 
     <script src="comments.js"></script>
+    <script src="security.js"></script>
+    <script src="presence.js"></script>
     <script>
         const FIREBASE_CONFIG = {
             apiKey: 'AIzaSyByDS_xwe-nZQWlWTMUgRex4ITMPWtGRKQ',
@@ -245,13 +247,19 @@
             document.getElementById('profileImageEdit').classList.toggle('hidden', !isOwnProfile);
             document.getElementById('saveProfileButton').classList.toggle('hidden', !isOwnProfile);
             document.getElementById('bioDisplay').classList.toggle('hidden', isOwnProfile);
-            document.getElementById('profileImage').src = profileData.photoURL || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="96" height="96"%3E%3Crect width="100%25" height="100%25" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="55%25" text-anchor="middle" font-size="40"%3E%F0%9F%91%A4%3C/text%3E%3C/svg%3E';
+            document.getElementById('profileImage').src = AppSecurity.safeImageUrl(profileData.photoURL) || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="96" height="96"%3E%3Crect width="100%25" height="100%25" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="55%25" text-anchor="middle" font-size="40"%3E%F0%9F%91%A4%3C/text%3E%3C/svg%3E';
             renderPosts('posts');
         }
 
         document.getElementById('profileImageInput').addEventListener('change', async event => {
             const file = event.target.files[0];
             if (!file) return;
+            if (!/^image\/(?:png|jpeg|webp|gif)$/i.test(file.type) || file.size > 10 * 1024 * 1024) {
+                pendingImage = null;
+                event.target.value = '';
+                document.getElementById('imageStatus').textContent = 'اختر صورة PNG أو JPEG أو WebP أو GIF بحجم لا يتجاوز 10 ميجابايت.';
+                return;
+            }
             try {
                 document.getElementById('profileImage').src = URL.createObjectURL(file);
                 document.getElementById('imageStatus').textContent = 'تم اختيار الصورة، جارٍ تحسينها...';
@@ -355,7 +363,15 @@
                 ? posts.filter(post => savedIds.includes(post.id))
                 : posts.filter(post => post.authorId === viewedUserId);
             const container = document.getElementById('profilePosts');
-            container.innerHTML = visible.length ? visible.map(post => `<article class="profile-post border border-gray-100 dark:border-neutral-700 rounded-md text-xs space-y-2"><div class="p-3"><a href="index.html#post-${encodeURIComponent(post.id)}" class="block hover:underline"><span class="font-bold">${escapeHtml(post.subject || 'منشور')}</span><span class="text-gray-500"> • ${escapeHtml(post.text || 'ملف مرفق')}</span></a>${post.images?.length ? `<div class="grid grid-cols-2 gap-2 mt-2">${post.images.map(image => `<img src="${image}" alt="" class="w-full h-24 object-cover rounded border">`).join('')}</div>` : ''}${post.pdfURL ? `<a href="${post.pdfURL}" target="_blank" rel="noopener" class="text-blue-700 dark:text-blue-400 underline">فتح ملف PDF: ${escapeHtml(post.pdfName || 'document.pdf')}</a>` : ''}</div>${renderPostComments(post)}</article>`).join('') : '<p class="text-center text-xs text-gray-500 py-4">لا توجد منشورات هنا.</p>';
+            container.innerHTML = visible.length ? visible.map(post => {
+                const imageMarkup = (Array.isArray(post.images) ? post.images : []).map(image => {
+                    const safeImage = AppSecurity.safeImageUrl(image);
+                    return safeImage ? `<img src="${escapeHtml(safeImage)}" alt="" loading="lazy" class="w-full h-24 object-cover rounded border">` : '';
+                }).join('');
+                const pdfUrl = AppSecurity.safePdfUrl(post.pdfURL || (post.pdf && post.pdf.data));
+                const pdfName = escapeHtml(post.pdfName || (post.pdf && post.pdf.name) || 'document.pdf');
+                return `<article class="profile-post border border-gray-100 dark:border-neutral-700 rounded-md text-xs space-y-2"><div class="p-3"><a href="index.html#post-${encodeURIComponent(post.id)}" class="block hover:underline"><span class="font-bold">${escapeHtml(post.subject || 'منشور')}</span><span class="text-gray-500"> • ${escapeHtml(post.text || 'ملف مرفق')}</span></a>${imageMarkup ? `<div class="grid grid-cols-2 gap-2 mt-2">${imageMarkup}</div>` : ''}${pdfUrl ? `<a href="${escapeHtml(pdfUrl)}" target="_blank" rel="noopener noreferrer" class="text-blue-700 dark:text-blue-400 underline">فتح ملف PDF: ${pdfName}</a>` : ''}</div>${renderPostComments(post)}</article>`;
+            }).join('') : '<p class="text-center text-xs text-gray-500 py-4">لا توجد منشورات هنا.</p>';
         }
 
         function showTab(tab) {
@@ -376,10 +392,11 @@
         }
 
         function openImageModal() {
-            if (!viewedUser || !viewedUser.photoURL) return;
+            const photoURL = viewedUser && AppSecurity.safeImageUrl(viewedUser.photoURL);
+            if (!photoURL) return;
             const modal = document.getElementById('imageModal');
             const image = document.getElementById('largeProfileImage');
-            image.src = viewedUser.photoURL;
+            image.src = photoURL;
             modal.classList.remove('hidden');
             requestAnimationFrame(() => modal.classList.add('visible'));
         }
@@ -396,6 +413,7 @@
         }
 
         applyTheme(localStorage.getItem('theme') === 'dark');
+        startPresenceTracking(firestore, loggedInUser);
         renderProfile();
         loadUserProfile().catch(error => {
             console.error('Profile load failed:', error);
@@ -406,5 +424,6 @@
         });
         listenForProfilePosts();
     </script>
+    <span aria-hidden="true" class="pointer-events-none fixed bottom-2 right-2 z-[25] select-none text-[9px] leading-none text-gray-500/50 dark:text-gray-400/45">الإصدار 2.11.0</span>
 </body>
 </html>

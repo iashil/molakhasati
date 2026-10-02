@@ -9,6 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <!-- 2. إعداد الوضع الداكن بعد استدعاء المكتبة -->
+    <script src="presence.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class'
@@ -238,7 +239,9 @@
             if (currentUser.role !== 'admin') {
                 alert('عذراً، لا تملك صلاحيات الوصول لهذه الصفحة.');
                 window.location.href = 'index.html';
+                return;
             }
+            startPresenceTracking(db, currentUser);
         })();
 
         let sidebarIsOpen = window.innerWidth >= 1024;
@@ -300,7 +303,7 @@
             const name = sidebarProfile.querySelector('span');
             if (name) name.textContent = currentUser.name || 'حسابي';
             if (img) {
-                img.src = currentUser.photoURL || defaultAvatar;
+                img.src = safeAdminMediaUrl(currentUser.photoURL, 'image') || defaultAvatar;
                 img.onerror = () => { img.onerror = null; img.src = defaultAvatar; };
             }
             if (db) {
@@ -308,7 +311,7 @@
                     if (!doc.exists) return;
                     const data = doc.data() || {};
                     if (name) name.textContent = data.name || currentUser.name || 'حسابي';
-                    if (img) { img.src = data.photoURL || currentUser.photoURL || defaultAvatar; }
+                    if (img) { img.src = safeAdminMediaUrl(data.photoURL, 'image') || safeAdminMediaUrl(currentUser.photoURL, 'image') || defaultAvatar; }
                 }).catch(error => console.error('فشل تحميل بيانات Sidebar:', error));
             }
         }
@@ -331,17 +334,17 @@
                 return;
             }
 
-            users.push({
+            const newAdmin = {
                 id: 'admin_' + Date.now(),
                 name: name,
                 email: email,
-                password: password,
                 role: 'admin',
                 status: 'active'
-            });
+            };
 
+            users.push({...newAdmin, password});
             localStorage.setItem('app_users', JSON.stringify(users));
-            if (db) await db.collection('users').doc(users[users.length - 1].id).set(users[users.length - 1]);
+            if (db) await db.collection('users').doc(newAdmin.id).set(newAdmin);
             alert('تم إضاقة المسؤول بنجاح.');
             this.reset();
             renderAdminData();
@@ -424,6 +427,21 @@
             }[character]));
         }
 
+        function safeAdminMediaUrl(value, type) {
+            if (typeof value !== 'string' || !value.trim()) return '';
+            const url = value.trim();
+            const dataPattern = type === 'image'
+                ? /^data:image\/(?:png|jpeg|webp|gif);base64,[a-z0-9+/]+=*$/i
+                : /^data:application\/pdf;base64,[a-z0-9+/]+=*$/i;
+            if (dataPattern.test(url)) return url;
+            try {
+                const parsed = new URL(url, window.location.href);
+                return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? parsed.href : '';
+            } catch (_) {
+                return '';
+            }
+        }
+
         async function deletePostComment(postId, commentId) {
             if (!confirm('هل أنت متأكد من حذف هذا التعليق؟')) return;
 
@@ -457,6 +475,17 @@
         document.getElementById('adminPostsFeed').addEventListener('click', event => {
             const button = event.target.closest('[data-delete-comment-id]');
             if (button) deletePostComment(button.dataset.postId, button.dataset.deleteCommentId);
+
+            const actionButton = event.target.closest('[data-admin-action]');
+            if (!actionButton) return;
+            if (actionButton.dataset.adminAction === 'delete-post') deletePost(actionButton.dataset.postId);
+        });
+
+        document.getElementById('usersTableBody').addEventListener('click', event => {
+            const button = event.target.closest('[data-admin-action]');
+            if (!button) return;
+            if (button.dataset.adminAction === 'toggle-user-status') toggleUserStatus(button.dataset.userId);
+            if (button.dataset.adminAction === 'delete-user') deleteUser(button.dataset.userId);
         });
 
         async function renderAdminData(cloudUsers, cloudPosts) {
@@ -472,14 +501,14 @@
                 const tr = document.createElement('tr');
                 // تمت إضافة كلاسات الدارك مود هنا
                 tr.innerHTML = `
-                    <td class="p-2 font-medium">${u.name}</td>
-                    <td class="p-2 text-gray-500 dark:text-gray-400" dir="ltr">${u.email || 'غير متوفر'}</td>
-                    <td class="p-2"><span class="px-1.5 py-0.5 rounded text-[10px] ${u.role === 'admin' ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300' : 'bg-gray-100 text-gray-700 dark:bg-neutral-700 dark:text-gray-300'}">${u.role}</span></td>
-                    <td class="p-2"><span class="px-1.5 py-0.5 rounded text-[10px] ${u.status === 'banned' ? 'bg-red-600 text-white dark:bg-red-700' : 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300'}">${u.status === 'banned' ? 'محظور' : 'نشط'}</span></td>
-                    <td class="p-2 text-gray-500 dark:text-gray-400" dir="ltr">${formatAdminTime(u.lastLoginAt)}</td>
+                    <td class="p-2 font-medium">${escapeAdminHtml(u.name || 'بدون اسم')}</td>
+                    <td class="p-2 text-gray-500 dark:text-gray-400" dir="ltr">${escapeAdminHtml(u.email || 'غير متوفر')}</td>
+                    <td class="p-2"><span class="px-1.5 py-0.5 rounded text-[10px] ${u.role === 'admin' ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300' : 'bg-gray-100 text-gray-700 dark:bg-neutral-700 dark:text-gray-300'}">${escapeAdminHtml(u.role || 'user')}</span></td>
+                    <td class="p-2" data-user-presence="${escapeAdminHtml(u.id)}">${getAdminPresenceMarkup(u)}</td>
+                    <td class="p-2 text-gray-500 dark:text-gray-400" dir="ltr">${formatAdminTime(u.lastSeenAt || u.lastLoginAt)}</td>
                     <td class="p-2 space-x-2 space-x-reverse">
-                        <button onclick="toggleUserStatus('${u.id}')" class="text-amber-600 dark:text-amber-500 hover:underline">${u.status === 'banned' ? 'إلغاء الحظر' : 'حظر'}</button>
-                        <button onclick="deleteUser('${u.id}')" class="text-red-600 dark:text-red-500 hover:underline">حذف</button>
+                        <button type="button" data-admin-action="toggle-user-status" data-user-id="${escapeAdminHtml(u.id)}" class="text-amber-600 dark:text-amber-500 hover:underline">${u.status === 'banned' ? 'إلغاء الحظر' : 'حظر'}</button>
+                        <button type="button" data-admin-action="delete-user" data-user-id="${escapeAdminHtml(u.id)}" class="text-red-600 dark:text-red-500 hover:underline">حذف</button>
                     </td>
                 `;
                 usersTbody.appendChild(tr);
@@ -498,18 +527,21 @@
                 const div = document.createElement('div');
                 // تمت إضافة كلاسات الدارك مود هنا للمنشورات
                 div.className = "border dark:border-neutral-700 rounded p-3 bg-gray-50 dark:bg-neutral-800/50 space-y-2 transition-colors";
+                const pdfUrl = safeAdminMediaUrl(p.pdfURL || (p.pdf && p.pdf.data), 'pdf');
+                const imageUrl = safeAdminMediaUrl(p.image, 'image');
+                const pdfName = escapeAdminHtml(p.pdfName || (p.pdf && p.pdf.name) || 'document.pdf');
                 div.innerHTML = `
                     <div class="flex items-center justify-between border-b dark:border-neutral-700 pb-2">
                         <div>
-                            <span class="font-bold text-xs">${p.authorName}</span>
+                            <span class="font-bold text-xs">${escapeAdminHtml(p.authorName || 'بدون اسم')}</span>
                             ${p.isAnonymous ? '<span class="bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 text-[10px] px-1.5 py-0.5 rounded mr-2 font-bold">نُشر بمجهول</span>' : ''}
-                            <div class="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">${p.grade || ''} ${p.subject ? '• '+p.subject : ''} • ${formatPostTime(p.time)}</div>
+                            <div class="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">${escapeAdminHtml(p.grade || '')} ${p.subject ? '• ' + escapeAdminHtml(p.subject) : ''} • ${formatPostTime(p.time)}</div>
                         </div>
-                        <button onclick="deletePost('${p.id}')" class="bg-red-600 text-white text-[10px] px-2 py-1 rounded hover:bg-red-700 transition-colors">حذف المنشور</button>
+                        <button type="button" data-admin-action="delete-post" data-post-id="${escapeAdminHtml(p.id)}" class="bg-red-600 text-white text-[10px] px-2 py-1 rounded hover:bg-red-700 transition-colors">حذف المنشور</button>
                     </div>
-                    ${p.text ? `<p class="text-xs text-gray-800 dark:text-gray-200">${p.text}</p>` : ''}
-                    ${p.pdfURL || (p.pdf && p.pdf.data) ? `<a href="${p.pdfURL || p.pdf.data}" target="_blank" rel="noopener" download="${p.pdfName || p.pdf.name || 'document.pdf'}" class="inline-flex items-center gap-2 text-xs text-blue-700 dark:text-blue-400 underline">📄 فتح ملف PDF: ${p.pdfName || p.pdf.name || 'document.pdf'}</a>` : ''}
-                    ${p.image ? `<img src="${p.image}" class="max-h-40 rounded border dark:border-neutral-700 object-cover">` : ''}
+                    ${p.text ? `<p class="text-xs text-gray-800 dark:text-gray-200">${escapeAdminHtml(p.text)}</p>` : ''}
+                    ${pdfUrl ? `<a href="${escapeAdminHtml(pdfUrl)}" target="_blank" rel="noopener noreferrer" download="${pdfName}" class="inline-flex items-center gap-2 text-xs text-blue-700 dark:text-blue-400 underline">📄 فتح ملف PDF: ${pdfName}</a>` : ''}
+                    ${imageUrl ? `<img src="${escapeAdminHtml(imageUrl)}" alt="صورة المنشور" class="max-h-40 rounded border dark:border-neutral-700 object-cover">` : ''}
                     <details class="border-t border-gray-200 pt-2 dark:border-neutral-700">
                         <summary class="cursor-pointer text-xs font-semibold text-gray-700 dark:text-gray-200">التعليقات (${Array.isArray(p.comments) ? p.comments.length : 0})</summary>
                         <div class="mt-2 space-y-2">
@@ -536,25 +568,53 @@
             return new Date(time).toLocaleString('ar-SA');
         }
 
+        function getAdminPresenceMarkup(user) {
+            if (user.status === 'banned') {
+                return '<span class="px-1.5 py-0.5 rounded text-[10px] bg-red-600 text-white dark:bg-red-700">محظور</span>';
+            }
+
+            const lastSeen = user.lastSeenAt;
+            const lastSeenTime = lastSeen && typeof lastSeen.toDate === 'function'
+                ? lastSeen.toDate().getTime()
+                : new Date(lastSeen || '').getTime();
+            const elapsed = Date.now() - lastSeenTime;
+            const isOnline = Number.isFinite(lastSeenTime) && elapsed >= -60000 && elapsed <= 120000;
+            return isOnline
+                ? '<span class="px-1.5 py-0.5 rounded text-[10px] bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300">متصل</span>'
+                : '<span class="px-1.5 py-0.5 rounded text-[10px] bg-gray-100 text-gray-600 dark:bg-neutral-700 dark:text-gray-300">غير متصل</span>';
+        }
+
+        function refreshAdminPresence() {
+            if (!cachedAdminUsers) return;
+            document.querySelectorAll('[data-user-presence]').forEach(cell => {
+                const user = cachedAdminUsers.find(item => String(item.id) === cell.dataset.userPresence);
+                if (user) cell.innerHTML = getAdminPresenceMarkup(user);
+            });
+        }
+
+        setInterval(refreshAdminPresence, 30000);
+
         function formatPostTime(time) {
             if (!time) return 'جارٍ الحفظ...';
             if (typeof time.toDate === 'function') return time.toDate().toLocaleString('ar-SA');
-            return time;
+            return escapeAdminHtml(time);
         }
 
         if (db) {
             db.collection('users').onSnapshot(snapshot => {
                 const users = [];
                 snapshot.forEach(doc => users.push({id: doc.id, ...doc.data()}));
-                db.collection('posts').get().then(postsSnapshot => {
-                    const posts = [];
-                    postsSnapshot.forEach(doc => posts.push({id: doc.id, ...doc.data()}));
-                    renderAdminData(users, posts);
-                });
+                renderAdminData(users, cachedAdminPosts);
+            });
+            db.collection('posts').onSnapshot(snapshot => {
+                const posts = [];
+                snapshot.forEach(doc => posts.push({id: doc.id, ...doc.data()}));
+                renderAdminData(cachedAdminUsers, posts);
             });
         } else {
             renderAdminData();
         }
     </script>
+    <span aria-hidden="true" class="pointer-events-none fixed bottom-2 right-2 z-[25] select-none text-[9px] leading-none text-gray-500/50 dark:text-gray-400/45">الإصدار 2.11.0</span>
 </body>
 </html>

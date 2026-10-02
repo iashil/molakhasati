@@ -100,6 +100,30 @@
             animation: fadeUp 260ms var(--motion-ease) both;
         }
 
+        .discover-users-list {
+            scrollbar-width: thin;
+            scrollbar-color: #6b7280 transparent;
+            touch-action: pan-x;
+        }
+
+        .post-composer-backdrop {
+            opacity: 0;
+            transition: opacity 180ms ease;
+        }
+
+        .post-composer-backdrop.is-open {
+            opacity: 1;
+        }
+
+        .post-composer-panel {
+            transform: translateY(18px);
+            transition: transform 220ms var(--motion-ease);
+        }
+
+        .post-composer-backdrop.is-open .post-composer-panel {
+            transform: translateY(0);
+        }
+
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
                 animation-duration: 0.01ms !important;
@@ -110,7 +134,7 @@
         }
     </style>
 </head>
-<body class="bg-white text-gray-900 dark:bg-neutral-900 dark:text-gray-100 min-h-screen">
+<body class="bg-white text-gray-900 dark:bg-neutral-900 dark:text-gray-100 min-h-screen pb-24 sm:pb-28">
 
     <header class="bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 sticky top-0 z-50">
         <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
@@ -135,7 +159,7 @@
 
     <div id="sidebarOverlay" onclick="closeSidebar()" class="sidebar-overlay fixed inset-0 z-40 bg-black/40 opacity-0 invisible pointer-events-none lg:hidden"></div>
 
-    <div id="contentLayout" class="max-w-6xl mx-auto px-4 py-6 lg:grid lg:grid-cols-[260px_minmax(0,1fr)] gap-6">
+    <div id="contentLayout" class="max-w-6xl mx-auto px-4 py-6 pb-10 lg:grid lg:grid-cols-[260px_minmax(0,1fr)] gap-6">
         <aside id="sidebar" class="sidebar-animated fixed inset-y-0 right-0 z-50 w-[82%] max-w-[280px] bg-white dark:bg-neutral-900 border-l border-gray-200 dark:border-neutral-800 shadow-2xl translate-x-full opacity-0 lg:translate-x-0 lg:opacity-100 lg:static lg:w-auto lg:shadow-none lg:border-none lg:bg-transparent dark:lg:bg-transparent">
             <div class="flex h-full flex-col p-4">
                 <div class="mb-4 flex items-center justify-between pb-3 border-b border-gray-200 dark:border-neutral-800">
@@ -176,6 +200,15 @@
         </aside>
 
         <main class="min-w-0 space-y-6">
+            <section class="bg-white dark:bg-neutral-900 p-4 rounded-lg border border-gray-200 dark:border-neutral-800" aria-labelledby="discoverUsersTitle">
+                <div class="flex items-center justify-between gap-3 mb-3">
+                    <h2 id="discoverUsersTitle" class="text-sm font-bold">اكتشف المستخدمين</h2>
+                    <span class="text-[10px] text-gray-500 dark:text-gray-400">ملفات حقيقية من المنصة</span>
+                </div>
+                <p id="discoverUsersMessage" role="status" class="text-xs text-gray-500 dark:text-gray-400">جارٍ تحميل المستخدمين...</p>
+                <div id="discoverUsersList" class="discover-users-list hidden -mx-1 flex gap-4 overflow-x-auto px-1 pb-2" aria-label="المستخدمون"></div>
+            </section>
+
             <div class="bg-white dark:bg-neutral-900 p-4 rounded-lg border border-gray-200 dark:border-neutral-800 space-y-3">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
@@ -205,52 +238,70 @@
                 </div>
             </div>
 
-            <div class="bg-white dark:bg-neutral-900 p-4 rounded-lg border border-gray-200 dark:border-neutral-800 space-y-3">
-                <textarea id="postText" rows="2" placeholder="اكتب وصفاً أو ملاحظة للدرس..." class="w-full bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-md p-2.5 text-xs outline-none resize-none"></textarea>
-
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <select id="newPostGrade" class="bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded p-1.5 text-xs">
-                        <option value="الأول الثانوي">الأول الثانوي</option>
-                        <option value="الثاني الثانوي">الثاني الثانوي</option>
-                        <option value="الثالث الثانوي">الثالث الثانوي</option>
-                    </select>
-                    <select id="newPostSubject" class="bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded p-1.5 text-xs">
-                        <option value="تاريخ">تاريخ</option>
-                        <option value="جغرافيا">جغرافيا</option>
-                        <option value="عربي">عربي</option>
-                        <option value="الرياضيات">الرياضيات</option>
-                        <option value="الفيزياء">الفيزياء</option>
-                        <option value="الكيمياء">الكيمياء</option>
-                        <option value="انجليزي">انجليزي</option>
-                        <option value="قرآن">قرآن</option>
-                        <option value="إسلامية">إسلامية</option>
-                    </select>
-                    <label class="flex items-center justify-center bg-gray-100 dark:bg-neutral-800 text-xs rounded p-1.5 cursor-pointer border border-gray-200 dark:border-neutral-700">
-                        <span>📷 صورة أو ملف PDF</span>
-                        <input type="file" id="postImage" accept="image/*,.pdf,application/pdf" multiple class="w-full text-xs text-gray-500 border p-1 rounded bg-gray-50" onchange="handleImageSelect(event)">
-                    </label>
-                </div>
-
-                <div class="flex items-center gap-2 pt-1">
-                    <input type="checkbox" id="isAnonymousInput" class="w-4 h-4 rounded border-gray-300">
-                    <label for="isAnonymousInput" class="text-xs text-gray-700 dark:text-gray-300">النشر مجهول الهوية (Anonymous)</label>
-                </div>
-
-                <div id="imagePreviewContainer" class="hidden relative">
-                    <div id="imagePreview" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
-                    <button onclick="removeSelectedImage()" class="absolute top-2 left-2 bg-gray-900 text-white rounded-full px-2 py-0.5 text-[10px]">إلغاء</button>
-                </div>
-
-                <button onclick="createNewPost()" class="w-full bg-gray-900 dark:bg-gray-200 text-white dark:text-gray-900 font-medium py-2 rounded-md text-xs">
-                    نشر في الأرشيف
-                </button>
-            </div>
-
             <div id="postsFeed" class="space-y-6"></div>
         </main>
     </div>
 
-    <div id="userSearchModal" class="hidden fixed inset-0 z-[60] bg-black/50 p-4 flex items-center justify-center">
+    <div id="postComposerModal" class="post-composer-backdrop hidden fixed inset-0 z-[70] flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4" onclick="if (event.target === this) closePostComposer()">
+        <section role="dialog" aria-modal="true" aria-labelledby="postComposerTitle" class="post-composer-panel w-full max-w-xl max-h-[92dvh] overflow-y-auto rounded-t-2xl border border-gray-200 bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl dark:border-neutral-700 dark:bg-neutral-900 sm:rounded-xl">
+            <div class="mb-4 flex items-center justify-between gap-3 border-b border-gray-200 pb-3 dark:border-neutral-700">
+                <h2 id="postComposerTitle" class="font-bold text-sm">نشر مادة جديدة</h2>
+                <button type="button" onclick="closePostComposer()" class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-lg text-gray-600 dark:border-neutral-700 dark:text-gray-300" aria-label="إغلاق نافذة النشر">×</button>
+            </div>
+
+            <div class="space-y-4">
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-300" for="postText">الوصف أو الملاحظة
+                    <textarea id="postText" rows="3" placeholder="اكتب وصفاً أو ملاحظة للدرس..." class="mt-1 w-full resize-y rounded-md border border-gray-200 bg-gray-50 p-2.5 text-xs outline-none focus:border-blue-500 dark:border-neutral-700 dark:bg-neutral-800"></textarea>
+                </label>
+
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <label class="text-xs font-medium text-gray-700 dark:text-gray-300" for="newPostGrade">الصف الدراسي
+                        <select id="newPostGrade" class="mt-1 w-full rounded-md border border-gray-200 bg-gray-50 p-2 text-xs dark:border-neutral-700 dark:bg-neutral-800">
+                            <option value="الأول الثانوي">الأول الثانوي</option>
+                            <option value="الثاني الثانوي">الثاني الثانوي</option>
+                            <option value="الثالث الثانوي">الثالث الثانوي</option>
+                        </select>
+                    </label>
+                    <label class="text-xs font-medium text-gray-700 dark:text-gray-300" for="newPostSubject">المادة الدراسية
+                        <select id="newPostSubject" class="mt-1 w-full rounded-md border border-gray-200 bg-gray-50 p-2 text-xs dark:border-neutral-700 dark:bg-neutral-800">
+                            <option value="تاريخ">تاريخ</option>
+                            <option value="جغرافيا">جغرافيا</option>
+                            <option value="عربي">عربي</option>
+                            <option value="الرياضيات">الرياضيات</option>
+                            <option value="الفيزياء">الفيزياء</option>
+                            <option value="الكيمياء">الكيمياء</option>
+                            <option value="انجليزي">انجليزي</option>
+                            <option value="قرآن">قرآن</option>
+                            <option value="إسلامية">إسلامية</option>
+                        </select>
+                    </label>
+                    <label class="text-xs font-medium text-gray-700 dark:text-gray-300" for="newPostDate">تاريخ المادة
+                        <input id="newPostDate" type="date" class="mt-1 w-full rounded-md border border-gray-200 bg-gray-50 p-2 text-xs dark:border-neutral-700 dark:bg-neutral-800" required>
+                    </label>
+                    <label class="block text-xs font-medium text-gray-700 dark:text-gray-300" for="postImage">صورة أو ملف PDF
+                        <input type="file" id="postImage" accept="image/png,image/jpeg,image/webp,image/gif,.pdf,application/pdf" multiple class="mt-1 w-full rounded-md border border-gray-200 bg-gray-50 p-2 text-xs dark:border-neutral-700 dark:bg-neutral-800" onchange="handleImageSelect(event)">
+                    </label>
+                </div>
+
+                <label class="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300" for="isAnonymousInput">
+                    <input type="checkbox" id="isAnonymousInput" class="h-4 w-4 rounded border-gray-300">
+                    النشر مجهول الهوية (Anonymous)
+                </label>
+
+                <div id="imagePreviewContainer" class="hidden relative">
+                    <div id="imagePreview" class="grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
+                    <button type="button" onclick="removeSelectedImage()" class="absolute left-2 top-2 rounded-full bg-gray-900 px-2 py-1 text-[10px] text-white">إزالة الملف</button>
+                </div>
+                <p id="postFormStatus" role="status" aria-live="polite" class="min-h-4 text-xs text-gray-600 dark:text-gray-300"></p>
+                <div class="flex gap-2">
+                    <button type="button" onclick="closePostComposer()" class="flex-1 rounded-md border border-gray-300 py-2.5 text-xs font-semibold dark:border-neutral-700">إلغاء</button>
+                    <button id="publishPostButton" type="button" onclick="createNewPost()" class="flex-1 rounded-md bg-gray-900 py-2.5 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900">نشر في الأرشيف</button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div id="userSearchModal" class="hidden fixed inset-0 z-[60] bg-black/50 p-4 flex items-center justify-center" onclick="if (event.target === this) closeUserSearch()">
         <div class="w-full max-w-md bg-white dark:bg-neutral-800 rounded-lg border border-gray-200 dark:border-neutral-700 p-5 space-y-4">
             <div class="flex items-center justify-between">
                 <h2 class="font-bold text-sm">البحث عن مستخدم</h2>
@@ -264,19 +315,49 @@
         </div>
     </div>
 
+    <div id="appToast" role="status" aria-live="polite" class="pointer-events-none fixed bottom-24 left-1/2 z-[80] hidden -translate-x-1/2 rounded-md bg-gray-900 px-4 py-2 text-center text-xs text-white shadow-lg sm:bottom-28"></div>
+
     <footer class="flex justify-center py-6">
         <a href="https://www.instagram.com/iashil_/" target="_blank" rel="noopener noreferrer" class="inline-block border border-black bg-black px-4 py-2 text-xs text-white rounded-full dark:border-white dark:bg-white dark:text-black transition-colors hover:opacity-90">
             Created By: ashil
         </a>
     </footer>
 
+    <nav id="bottomNavigation" aria-label="التنقل الرئيسي" class="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200/90 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(0,0,0,0.06)] backdrop-blur dark:border-neutral-700 dark:bg-neutral-900/95">
+        <div class="mx-auto grid max-w-lg grid-cols-5 items-center px-2 py-1.5">
+            <a href="index.html" aria-label="الرئيسية" aria-current="page" class="flex min-h-14 flex-col items-center justify-center gap-1 text-blue-700 dark:text-blue-400">
+                <svg aria-hidden="true" viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg>
+                <span class="text-[9px] font-semibold">الرئيسية</span>
+            </a>
+            <button type="button" onclick="openUserSearch()" aria-label="البحث عن مستخدم" title="البحث عن مستخدم" class="flex min-h-14 flex-col items-center justify-center gap-1 text-gray-600 hover:text-blue-700 dark:text-gray-300 dark:hover:text-blue-400">
+                <svg aria-hidden="true" viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
+                <span class="text-[9px]">بحث</span>
+            </button>
+            <button id="openPostComposer" type="button" onclick="openPostComposer()" aria-label="نشر جديد" title="نشر جديد" class="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-blue-700 text-white shadow-md shadow-blue-900/20 ring-4 ring-blue-100 transition hover:bg-blue-800 active:scale-95 dark:bg-blue-500 dark:text-neutral-950 dark:ring-blue-950">
+                <svg aria-hidden="true" viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+            <a href="saved.html" aria-label="المحفوظات" class="flex min-h-14 flex-col items-center justify-center gap-1 text-gray-600 hover:text-blue-700 dark:text-gray-300 dark:hover:text-blue-400">
+                <svg aria-hidden="true" viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4.8A1.8 1.8 0 0 1 7.8 3h8.4A1.8 1.8 0 0 1 18 4.8V21l-6-4-6 4z"/></svg>
+                <span class="text-[9px]">المحفوظات</span>
+            </a>
+            <a id="bottomProfileLink" href="profile.html" aria-label="صفحتي الشخصية" title="صفحتي الشخصية" class="flex min-h-14 flex-col items-center justify-center gap-1 text-gray-600 hover:text-blue-700 dark:text-gray-300 dark:hover:text-blue-400">
+                <img id="bottomProfileAvatar" src="" alt="" class="h-7 w-7 rounded-full border border-gray-300 object-cover dark:border-neutral-600">
+                <span class="text-[9px]">حسابي</span>
+            </a>
+        </div>
+    </nav>
+
     <script src="comments.js"></script>
+    <script src="security.js"></script>
+    <script src="presence.js"></script>
     <script>
         let currentUser = null;
         let selectedImagesBase64 = [];
         let selectedImageFiles = [];
         let imageProcessingPromise = Promise.resolve();
         let selectedPdf = null;
+        let isSubmittingPost = false;
+        let appToastTimeout = null;
         const FIREBASE_CONFIG = {
             apiKey: 'AIzaSyByDS_xwe-nZQWlWTMUgRex4ITMPWtGRKQ',
             authDomain: 'molakhasat-web.firebaseapp.com',
@@ -307,10 +388,7 @@
         let sidebarIsOpen = window.innerWidth >= 1024;
 
         function getSafeProfileImageUrl(rawUrl) {
-            if (!rawUrl || typeof rawUrl !== 'string') return defaultAvatar;
-            const value = rawUrl.trim();
-            if (!value) return defaultAvatar;
-            return value;
+            return AppSecurity.safeImageUrl(rawUrl) || defaultAvatar;
         }
 
         function escapeHtml(value) {
@@ -324,12 +402,7 @@
         }
 
         function safeExternalUrl(rawUrl) {
-            if (!rawUrl || typeof rawUrl !== 'string') return '';
-            try {
-                const url = new URL(rawUrl, window.location.href);
-                if (url.protocol === 'https:' || url.protocol === 'http:') return url.href;
-            } catch (_) {}
-            return '';
+            return AppSecurity.safeHttpUrl(rawUrl);
         }
 
         function renderSidebarUser(userData) {
@@ -343,6 +416,7 @@
                     <img src="${defaultAvatar}" alt="صورة المستخدم" class="h-10 w-10 rounded-full object-cover border border-gray-200 dark:border-neutral-700">
                     <span class="truncate">حسابي</span>
                 `;
+                document.getElementById('bottomProfileAvatar').src = defaultAvatar;
                 return;
             }
 
@@ -352,8 +426,18 @@
             sidebarProfile.setAttribute('data-sidebar-item', 'profile');
             sidebarProfile.innerHTML = `
                 <img src="${safePhoto}" alt="صورة المستخدم" class="h-10 w-10 rounded-full object-cover border border-gray-200 dark:border-neutral-700" onerror="this.onerror=null;this.src='${defaultAvatar}';">
-                <span class="truncate">${safeName}</span>
+                <span class="truncate">${escapeHtml(safeName)}</span>
             `;
+            const bottomProfileLink = document.getElementById('bottomProfileLink');
+            const bottomProfileAvatar = document.getElementById('bottomProfileAvatar');
+            bottomProfileLink.href = 'profile.html';
+            bottomProfileLink.title = `الملف الشخصي: ${safeName}`;
+            bottomProfileAvatar.src = safePhoto;
+            bottomProfileAvatar.alt = `صورة ${safeName}`;
+            bottomProfileAvatar.onerror = () => {
+                bottomProfileAvatar.onerror = null;
+                bottomProfileAvatar.src = defaultAvatar;
+            };
         }
 
         async function loadSidebarUser() {
@@ -394,6 +478,56 @@
             }
         }
 
+        function renderDiscoverUsers(users, message) {
+            const list = document.getElementById('discoverUsersList');
+            const status = document.getElementById('discoverUsersMessage');
+            if (!users.length) {
+                list.classList.add('hidden');
+                status.textContent = message || 'لا يوجد مستخدمون آخرون لعرضهم الآن.';
+                status.classList.remove('hidden');
+                return;
+            }
+
+            list.innerHTML = users.map(user => {
+                const photo = escapeHtml(getSafeProfileImageUrl(user.photoURL || user.image || ''));
+                const name = escapeHtml(user.name || 'بدون اسم');
+                return `<a href="profile.html?uid=${encodeURIComponent(user.id)}" class="flex w-[4.5rem] shrink-0 snap-start flex-col items-center gap-1.5 text-center" aria-label="الملف الشخصي: ${name}">
+                    <span class="rounded-full bg-gradient-to-br from-blue-500 via-cyan-400 to-emerald-400 p-[2px]">
+                        <img src="${photo}" alt="" loading="lazy" decoding="async" class="h-14 w-14 rounded-full border-2 border-white bg-gray-100 object-cover dark:border-neutral-900" onerror="this.onerror=null;this.src='${defaultAvatar}';">
+                    </span>
+                    <span class="w-full truncate text-[10px] text-gray-700 dark:text-gray-300">${name}</span>
+                </a>`;
+            }).join('');
+            status.classList.add('hidden');
+            list.classList.remove('hidden');
+        }
+
+        async function loadDiscoverUsers() {
+            const status = document.getElementById('discoverUsersMessage');
+            status.textContent = 'جارٍ تحميل المستخدمين...';
+            status.classList.remove('hidden');
+            try {
+                let users = [];
+                if (db && firebaseConfigured) {
+                    await firebaseAuthReady;
+                    const snapshot = await db.collection('users').limit(30).get();
+                    snapshot.forEach(doc => {
+                        const user = {id: doc.id, ...doc.data()};
+                        userProfiles[user.id] = user;
+                        users.push(user);
+                    });
+                } else {
+                    users = JSON.parse(localStorage.getItem('app_users') || '[]');
+                }
+
+                users = users.filter(user => user.id && String(user.id) !== String(currentUser.id) && user.status !== 'banned');
+                renderDiscoverUsers(users.slice(0, 24));
+            } catch (error) {
+                console.error('تعذر تحميل شريط المستخدمين:', error);
+                renderDiscoverUsers([], 'تعذر تحميل المستخدمين الآن.');
+            }
+        }
+
         // التحقق من الصلاحيات وجودة الجلسة
         (function checkAuth() {
             const userStr = localStorage.getItem('current_user');
@@ -402,6 +536,7 @@
                 return;
             }
             currentUser = JSON.parse(userStr);
+            startPresenceTracking(db, currentUser);
             document.getElementById('userNameDisplay').textContent = currentUser.name || 'حسابي';
 
             if (currentUser.role === 'admin') {
@@ -411,6 +546,7 @@
             }
 
             loadSidebarUser();
+            loadDiscoverUsers();
         })();
 
         function toggleTheme() {
@@ -494,6 +630,10 @@
 
         async function handleImageSelect(event) {
             const files = Array.from(event.target.files);
+            if (!files.length) {
+                removeSelectedImage();
+                return;
+            }
 
             const pdfFiles = files.filter(file => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
             if (pdfFiles.length > 0) {
@@ -508,15 +648,41 @@
                     return;
                 }
 
+                let pdfSignature = '';
+                try {
+                    pdfSignature = await pdfFiles[0].slice(0, 1024).text();
+                } catch (_) {}
+                if (!pdfSignature.includes('%PDF-')) {
+                    alert('الملف المحدد لا يحتوي على توقيع PDF صالح.');
+                    event.target.value = '';
+                    removeSelectedImage();
+                    return;
+                }
+
                 selectedImagesBase64 = [];
                 selectedImageFiles = [];
                 selectedPdf = { name: pdfFiles[0].name, file: pdfFiles[0] };
-                document.getElementById('imagePreview').innerHTML = `<div class="col-span-full rounded border border-gray-300 dark:border-neutral-600 p-3 text-xs">📄 ${pdfFiles[0].name}</div>`;
+                document.getElementById('imagePreview').innerHTML = `<div class="col-span-full rounded border border-gray-300 dark:border-neutral-600 p-3 text-xs">📄 ${escapeHtml(pdfFiles[0].name)}</div>`;
                 document.getElementById('imagePreviewContainer').classList.remove('hidden');
                 return;
             }
 
             selectedPdf = null;
+
+            const unsupportedImage = files.some(file => !/^image\/(?:png|jpeg|webp|gif)$/i.test(file.type));
+            const totalImageSize = files.reduce((total, file) => total + file.size, 0);
+            if (unsupportedImage) {
+                alert('تُقبل الصور بصيغ PNG أو JPEG أو WebP أو GIF فقط.');
+                event.target.value = '';
+                removeSelectedImage();
+                return;
+            }
+            if (files.some(file => file.size > 10 * 1024 * 1024) || totalImageSize > 25 * 1024 * 1024) {
+                alert('يجب ألا يتجاوز حجم الصورة 10 ميجابايت، ومجموع الصور 25 ميجابايت.');
+                event.target.value = '';
+                removeSelectedImage();
+                return;
+            }
 
             if (files.length > 10) {
                 alert('عذراً، الحد الأقصى المسموح به هو 10 صور فقط في المنشور الواحد!');
@@ -563,71 +729,140 @@
             document.getElementById('imagePreviewContainer').classList.add('hidden');
         }
 
+        function getLocalDateValue() {
+            const now = new Date();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            return `${now.getFullYear()}-${month}-${day}`;
+        }
+
+        function openPostComposer() {
+            const modal = document.getElementById('postComposerModal');
+            if (isSubmittingPost) return;
+            const dateInput = document.getElementById('newPostDate');
+            if (!dateInput.value) dateInput.value = getLocalDateValue();
+            document.getElementById('postFormStatus').textContent = '';
+            modal.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+            requestAnimationFrame(() => modal.classList.add('is-open'));
+            document.getElementById('postText').focus();
+        }
+
+        function closePostComposer(force = false) {
+            if (isSubmittingPost && !force) return;
+            const modal = document.getElementById('postComposerModal');
+            if (modal.classList.contains('hidden')) return;
+            modal.classList.remove('is-open');
+            document.body.classList.remove('overflow-hidden');
+            setTimeout(() => {
+                if (!modal.classList.contains('is-open')) modal.classList.add('hidden');
+            }, 220);
+            document.getElementById('openPostComposer').focus();
+        }
+
+        function showAppToast(message, isError = false) {
+            const toast = document.getElementById('appToast');
+            toast.textContent = message;
+            toast.classList.toggle('bg-red-700', isError);
+            toast.classList.toggle('bg-gray-900', !isError);
+            toast.classList.remove('hidden');
+            clearTimeout(appToastTimeout);
+            appToastTimeout = setTimeout(() => toast.classList.add('hidden'), 3200);
+        }
+
         async function createNewPost() {
+            if (isSubmittingPost) return;
             const text = document.getElementById('postText').value.trim();
             const grade = document.getElementById('newPostGrade').value;
             const subject = document.getElementById('newPostSubject').value;
+            const studyDate = document.getElementById('newPostDate').value;
             const isAnonymous = document.getElementById('isAnonymousInput').checked;
+            const status = document.getElementById('postFormStatus');
+            const publishButton = document.getElementById('publishPostButton');
+            const hasSelectedFile = document.getElementById('postImage').files.length > 0;
 
-            if (!text && selectedImageFiles.length === 0 && !selectedPdf) {
-                alert('يرجى كتابة نص أو رفع صورة أولاً مع تحديد السنة الدراسية والمادة.');
+            if (!text && selectedImageFiles.length === 0 && !selectedPdf && !hasSelectedFile) {
+                status.textContent = 'اكتب وصفاً أو اختر صورة أو ملف PDF قبل النشر.';
+                return;
+            }
+            if (!studyDate) {
+                status.textContent = 'يرجى تحديد تاريخ المادة.';
                 return;
             }
 
             const normalizedText = text.toLowerCase();
-            const bannedWords = ["", "", ""];
-            const foundBannedWord = bannedWords.find(word => normalizedText.includes(word));
+            const foundBannedWord = bannedWords.find(word => word && normalizedText.includes(word.toLowerCase()));
             if (foundBannedWord) {
-                alert('لا يمكن نشر المنشور لأنه يحتوي على كلمة ممنوعة.');
+                status.textContent = 'لا يمكن نشر المنشور لأنه يحتوي على كلمة ممنوعة.';
                 return;
             }
 
-            await imageProcessingPromise;
-            let imageUrls = selectedImagesBase64;
-            let pdfURL = selectedPdf && selectedPdf.data;
-            if (db) {
-                await firebaseAuthReady;
-                imageUrls = await Promise.all(selectedImageFiles.map(file => uploadToCloudinary(file, 'image')));
-                if (selectedPdf) pdfURL = await uploadToCloudinary(selectedPdf.file, 'raw');
-            } else if (selectedPdf && selectedPdf.file) {
-                pdfURL = await fileToDataUrl(selectedPdf.file);
-            }
+            isSubmittingPost = true;
+            publishButton.disabled = true;
+            publishButton.textContent = 'جارٍ النشر...';
+            status.textContent = '';
+            try {
+                await imageProcessingPromise;
+                let imageUrls = selectedImagesBase64;
+                let pdfURL = selectedPdf && selectedPdf.data;
+                if (db) {
+                    await firebaseAuthReady;
+                    imageUrls = await Promise.all(selectedImageFiles.map(file => uploadToCloudinary(file, 'image')));
+                    if (selectedPdf) pdfURL = await uploadToCloudinary(selectedPdf.file, 'raw');
+                } else if (selectedPdf && selectedPdf.file) {
+                    pdfURL = await fileToDataUrl(selectedPdf.file);
+                }
 
-            const newPost = {
-                id: 'post_' + Date.now(),
-                authorId: currentUser.id,
-                authorName: currentUser.name, // الهوية الحقيقية محفوظة دائماً
-                isAnonymous: isAnonymous,
-                grade: grade,
-                subject: subject,
-                time: new Date().toLocaleString('ar-EG'),
-                text: text,
-                images: imageUrls,
-                pdf: selectedPdf ? {name: selectedPdf.name, data: pdfURL} : null
-            };
-
-            if (db) {
-                await db.collection('posts').add({
+                const newPost = {
+                    id: 'post_' + Date.now(),
                     authorId: currentUser.id,
                     authorName: currentUser.name,
                     isAnonymous: isAnonymous,
                     grade: grade,
                     subject: subject,
-                    time: firebase.firestore.FieldValue.serverTimestamp(),
+                    studyDate: studyDate,
+                    time: new Date().toLocaleString('ar-EG'),
                     text: text,
                     images: imageUrls,
-                    pdfURL: pdfURL || null,
-                    pdfName: selectedPdf ? selectedPdf.name : null
-                });
-            } else {
-                const posts = JSON.parse(localStorage.getItem('app_posts') || '[]');
-                posts.unshift(newPost);
-                localStorage.setItem('app_posts', JSON.stringify(posts));
-            }
+                    pdf: selectedPdf ? {name: selectedPdf.name, data: pdfURL} : null
+                };
 
-            document.getElementById('postText').value = '';
-            document.getElementById('isAnonymousInput').checked = false;
-            removeSelectedImage();
+                if (db) {
+                    await db.collection('posts').add({
+                        authorId: currentUser.id,
+                        authorName: currentUser.name,
+                        isAnonymous: isAnonymous,
+                        grade: grade,
+                        subject: subject,
+                        studyDate: studyDate,
+                        time: firebase.firestore.FieldValue.serverTimestamp(),
+                        text: text,
+                        images: imageUrls,
+                        pdfURL: pdfURL || null,
+                        pdfName: selectedPdf ? selectedPdf.name : null
+                    });
+                } else {
+                    const posts = JSON.parse(localStorage.getItem('app_posts') || '[]');
+                    posts.unshift(newPost);
+                    localStorage.setItem('app_posts', JSON.stringify(posts));
+                    renderPostsFromCloud(posts);
+                }
+
+                document.getElementById('postText').value = '';
+                document.getElementById('isAnonymousInput').checked = false;
+                document.getElementById('newPostDate').value = getLocalDateValue();
+                removeSelectedImage();
+                closePostComposer(true);
+                showAppToast('تم نشر المادة بنجاح.');
+            } catch (error) {
+                console.error('تعذر نشر المادة:', error);
+                status.textContent = `تعذر النشر: ${error.message || 'حدث خطأ غير متوقع. تحقق من الاتصال ثم حاول مجدداً.'}`;
+                showAppToast('تعذر النشر. بقيت بيانات النموذج كما هي.', true);
+            } finally {
+                isSubmittingPost = false;
+                publishButton.disabled = false;
+                publishButton.textContent = 'نشر في الأرشيف';
+            }
         }
 
         function normalizeCloudinaryDownloadUrl(url, fallbackName) {
@@ -676,7 +911,7 @@
                     : `<a href="profile.html?uid=${encodeURIComponent(post.authorId || '')}" class="inline-flex items-center gap-2 hover:underline"><img src="${authorPhoto}" alt="" class="w-7 h-7 rounded-full object-cover border border-gray-200 dark:border-neutral-700" onerror="this.onerror=null;this.src='${defaultAvatar}';"><span class="font-bold text-xs">${displayName}</span></a>`;
 
                 const rawPdfUrl = post.pdfURL || (post.pdf && post.pdf.data) || '';
-                const pdfUrl = safeExternalUrl(rawPdfUrl);
+                const pdfUrl = AppSecurity.safePdfUrl(rawPdfUrl);
                 const pdfName = post.pdfName || (post.pdf && post.pdf.name) || 'molakhasati-file.pdf';
                 const safePdfName = escapeHtml(pdfName);
                 const pdfDownloadHref = normalizeCloudinaryDownloadUrl(pdfUrl, pdfName);
@@ -689,17 +924,17 @@
                         <div>
                             ${authorLink}
                             <p class="text-[10px] text-gray-400 mt-0.5">
-                                <span>${escapeHtml(post.grade || '')}</span> • <span>${escapeHtml(post.subject || '')}</span> • ${formatPostTime(post.time)}
+                                <span>${escapeHtml(post.grade || '')}</span> • <span>${escapeHtml(post.subject || '')}</span> • ${post.studyDate ? `تاريخ المادة: ${formatStudyDate(post.studyDate)} • ` : ''}${formatPostTime(post.time)}
                             </p>
                         </div>
-                        <button onclick="toggleBookmark('${post.id}')" class="text-xs text-blue-700 dark:text-blue-400 hover:underline">${isBookmarked(post.id) ? 'إزالة الحفظ' : 'حفظ المنشور'}</button>
+                        <button type="button" data-bookmark-id="${escapeHtml(post.id)}" class="text-xs text-blue-700 dark:text-blue-400 hover:underline">${isBookmarked(post.id) ? 'إزالة الحفظ' : 'حفظ المنشور'}</button>
                     </div>
                     ${post.text ? `<div class="p-3 text-xs leading-relaxed">${escapeHtml(post.text)}</div>` : ''}
                     ${pdfUrl ? `<div class="p-3 flex items-center justify-between gap-3"><a href="${pdfUrl}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-xs text-blue-700 dark:text-blue-400 underline">📄 ${safePdfName}</a><a href="${pdfDownloadHref}" download="${safePdfName}" class="inline-flex items-center gap-1 text-[10px] text-blue-700 dark:text-blue-400 underline">⬇ تحميل PDF</a></div>` : ''}
                     ${post.images && post.images.length > 0 ? `
                         <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2 p-3">
                             ${post.images.map((img, index) => {
-                                const safeImg = safeExternalUrl(img);
+                                const safeImg = AppSecurity.safeImageUrl(img);
                                 if (!safeImg) return '';
                                 const imageName = `molakhasati-image-${index + 1}${safeImg.includes('.') ? (safeImg.match(/\.[a-zA-Z0-9]+(?:\?.*)?$/)?.[0] || '.jpg') : '.jpg'}`;
                                 const downloadHref = normalizeCloudinaryDownloadUrl(safeImg, imageName);
@@ -714,7 +949,7 @@
                                 `;
                             }).join('')}
                         </div>
-                    ` : (post.image ? `<img src="${post.image}" class="w-full max-h-80 object-cover border-t border-gray-100 dark:border-neutral-800">` : '')}
+                    ` : (AppSecurity.safeImageUrl(post.image) ? `<img src="${escapeHtml(AppSecurity.safeImageUrl(post.image))}" alt="صورة منشور" class="w-full max-h-80 object-cover border-t border-gray-100 dark:border-neutral-800">` : '')}
                     ${renderPostComments(post)}
                 `;
                 feedContainer.appendChild(postElement);
@@ -724,7 +959,12 @@
         function formatPostTime(time) {
             if (!time) return 'جارٍ الحفظ...';
             if (typeof time.toDate === 'function') return time.toDate().toLocaleString('ar-EG');
-            return time;
+            return escapeHtml(time);
+        }
+
+        function formatStudyDate(dateValue) {
+            const date = new Date(`${dateValue}T00:00:00`);
+            return Number.isNaN(date.getTime()) ? escapeHtml(dateValue) : date.toLocaleDateString('ar-EG');
         }
 
         function fileToDataUrl(file) {
@@ -801,6 +1041,11 @@
             renderPosts();
         }
 
+        document.getElementById('postsFeed').addEventListener('click', event => {
+            const button = event.target.closest('[data-bookmark-id]');
+            if (button) toggleBookmark(button.dataset.bookmarkId);
+        });
+
         function openUserSearch() {
             document.getElementById('userSearchModal').classList.remove('hidden');
             document.getElementById('userSearchInput').focus();
@@ -810,6 +1055,22 @@
         function closeUserSearch() {
             document.getElementById('userSearchModal').classList.add('hidden');
         }
+
+        document.addEventListener('keydown', event => {
+            if (event.key !== 'Escape') return;
+            if (!document.getElementById('postComposerModal').classList.contains('hidden')) {
+                closePostComposer();
+            } else if (!document.getElementById('userSearchModal').classList.contains('hidden')) {
+                closeUserSearch();
+            }
+        });
+
+        document.getElementById('discoverUsersList').addEventListener('wheel', event => {
+            if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+                event.currentTarget.scrollLeft += event.deltaY;
+                event.preventDefault();
+            }
+        }, {passive: false});
 
         async function searchUsers() {
             const results = document.getElementById('userSearchResults');
@@ -825,7 +1086,7 @@
                 snapshot.forEach(doc => {
                     const user = {id: doc.id, ...doc.data()};
                     userProfiles[user.id] = user;
-                    if (!query || (user.name || '').toLowerCase().includes(query)) users.push(user);
+                    if (!query || String(user.name || '').toLowerCase().includes(query)) users.push(user);
                 });
                 results.innerHTML = users.length ? users.map(user => {
                     const photo = getSafeProfileImageUrl(user.photoURL || '');
@@ -839,11 +1100,12 @@
                 }).join('') : '<p class="text-center text-xs text-gray-500">لا توجد نتائج.</p>';
             } catch (error) {
                 console.error('User search failed:', error);
-                results.innerHTML = `<p class="text-center text-xs text-red-600">تعذر البحث: ${error.message}</p>`;
+                results.innerHTML = `<p class="text-center text-xs text-red-600">تعذر البحث: ${escapeHtml(error.message)}</p>`;
             }
         }
 
         listenForPosts();
     </script>
+    <span aria-hidden="true" class="pointer-events-none fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-2 z-[25] select-none text-[9px] leading-none text-gray-500/50 dark:text-gray-400/45">الإصدار 2.11.0</span>
 </body>
 </html>

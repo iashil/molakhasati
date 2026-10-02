@@ -200,6 +200,8 @@
     </footer>
 
     <script src="comments.js"></script>
+    <script src="security.js"></script>
+    <script src="presence.js"></script>
     <script>
         let currentUser = null;
         let sidebarIsOpen = window.innerWidth >= 1024;
@@ -228,10 +230,7 @@
         }
 
         function getSafeProfileImageUrl(rawUrl) {
-            if (!rawUrl || typeof rawUrl !== 'string') return defaultAvatar;
-            const value = rawUrl.trim();
-            if (!value) return defaultAvatar;
-            return value;
+            return AppSecurity.safeImageUrl(rawUrl) || defaultAvatar;
         }
 
         function renderSidebarUser(userData) {
@@ -252,7 +251,7 @@
             sidebarProfile.href = 'profile.html';
             sidebarProfile.innerHTML = `
                 <img src="${safePhoto}" alt="صورة المستخدم" class="h-10 w-10 rounded-full object-cover border border-gray-200 dark:border-neutral-700" onerror="this.onerror=null;this.src='${defaultAvatar}';">
-                <span class="truncate">${safeName}</span>
+                <span class="truncate">${AppSecurity.escapeHtml(safeName)}</span>
             `;
         }
 
@@ -301,6 +300,7 @@
                 return;
             }
             currentUser = JSON.parse(userStr);
+            startPresenceTracking(db, currentUser);
             setCommentsContext(db, currentUser);
             document.getElementById('userNameDisplay').textContent = currentUser.name || 'حسابي';
 
@@ -394,7 +394,7 @@
         function formatPostTime(time) {
             if (!time) return 'جارٍ الحفظ...';
             if (typeof time.toDate === 'function') return time.toDate().toLocaleString('ar-EG');
-            return time;
+            return AppSecurity.escapeHtml(time);
         }
 
         function normalizeCloudinaryDownloadUrl(url, fallbackName) {
@@ -457,7 +457,7 @@
             const bioElement = document.getElementById('profileBio');
             bioElement.textContent = currentUser.bio || 'لا توجد نبذة شخصية';
 
-            const photoUrl = currentUser.photoURL || defaultAvatar;
+            const photoUrl = AppSecurity.safeImageUrl(currentUser.photoURL) || defaultAvatar;
             const profileImg = document.getElementById('profileImage');
             profileImg.src = photoUrl;
             profileImg.onerror = () => {
@@ -478,14 +478,15 @@
             }
 
             container.innerHTML = posts.map(post => {
-                const displayName = post.isAnonymous ? 'مجهول (Anonymous)' : post.authorName;
+                const displayName = post.isAnonymous ? 'مجهول (Anonymous)' : AppSecurity.escapeHtml(post.authorName || 'بدون اسم');
                 const authorProfile = post.isAnonymous ? null : userProfiles[post.authorId];
                 const authorLink = post.isAnonymous
                     ? `<span class="font-bold text-xs text-gray-500 italic">${displayName}</span>`
-                    : `<a href="profile.html?uid=${encodeURIComponent(post.authorId)}" class="inline-flex items-center gap-2 hover:underline"><img src="${authorProfile?.photoURL || defaultAvatar}" alt="" class="w-7 h-7 rounded-full object-cover border border-gray-200 dark:border-neutral-700"><span class="font-bold text-xs">${displayName}</span></a>`;
+                    : `<a href="profile.html?uid=${encodeURIComponent(post.authorId || '')}" class="inline-flex items-center gap-2 hover:underline"><img src="${AppSecurity.escapeHtml(getSafeProfileImageUrl(authorProfile?.photoURL || ''))}" alt="" class="w-7 h-7 rounded-full object-cover border border-gray-200 dark:border-neutral-700"><span class="font-bold text-xs">${displayName}</span></a>`;
 
-                const pdfUrl = post.pdfURL || (post.pdf && post.pdf.data);
+                const pdfUrl = AppSecurity.safePdfUrl(post.pdfURL || (post.pdf && post.pdf.data));
                 const pdfName = post.pdfName || (post.pdf && post.pdf.name) || 'molakhasati-file.pdf';
+                const safePdfName = AppSecurity.escapeHtml(pdfName);
                 const pdfDownloadHref = normalizeCloudinaryDownloadUrl(pdfUrl, pdfName);
 
                 return `
@@ -494,23 +495,25 @@
                             <div>
                                 ${authorLink}
                                 <p class="text-[10px] text-gray-400 mt-0.5">
-                                    <span>${post.grade || 'بدون صف'}</span> • <span>${post.subject || 'بدون مادة'}</span> • ${formatPostTime(post.time)}
+                                    <span>${AppSecurity.escapeHtml(post.grade || 'بدون صف')}</span> • <span>${AppSecurity.escapeHtml(post.subject || 'بدون مادة')}</span> • ${formatPostTime(post.time)}
                                 </p>
                             </div>
                         </div>
-                        ${post.text ? `<div class="p-3 text-xs leading-relaxed text-gray-700 dark:text-gray-300">${post.text}</div>` : ''}
-                        ${pdfUrl ? `<div class="p-3 flex items-center justify-between gap-3"><a href="${pdfUrl}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-xs text-blue-700 dark:text-blue-400 underline">📄 ${pdfName}</a><a href="${pdfDownloadHref}" download="${pdfName}" class="inline-flex items-center gap-1 text-[10px] text-blue-700 dark:text-blue-400 underline">⬇ تحميل</a></div>` : ''}
+                        ${post.text ? `<div class="p-3 text-xs leading-relaxed text-gray-700 dark:text-gray-300">${AppSecurity.escapeHtml(post.text)}</div>` : ''}
+                        ${pdfUrl ? `<div class="p-3 flex items-center justify-between gap-3"><a href="${AppSecurity.escapeHtml(pdfUrl)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 text-xs text-blue-700 dark:text-blue-400 underline">📄 ${safePdfName}</a><a href="${AppSecurity.escapeHtml(pdfDownloadHref)}" download="${safePdfName}" class="inline-flex items-center gap-1 text-[10px] text-blue-700 dark:text-blue-400 underline">⬇ تحميل</a></div>` : ''}
                         ${post.images && post.images.length > 0 ? `
                             <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2 p-3">
                                 ${post.images.map((img, index) => {
-                                    const imageName = `molakhasati-image-${index + 1}${img.includes('.') ? (img.match(/\.[a-zA-Z0-9]+(?:\?.*)?$/)?.[0] || '.jpg') : '.jpg'}`;
-                                    const downloadHref = normalizeCloudinaryDownloadUrl(img, imageName);
+                                    const safeImage = AppSecurity.safeImageUrl(img);
+                                    if (!safeImage) return '';
+                                    const imageName = `molakhasati-image-${index + 1}${safeImage.includes('.') ? (safeImage.match(/\.[a-zA-Z0-9]+(?:\?.*)?$/)?.[0] || '.jpg') : '.jpg'}`;
+                                    const downloadHref = normalizeCloudinaryDownloadUrl(safeImage, imageName);
                                     return `
                                         <div class="space-y-2">
-                                            <img src="${img}" alt="صورة منشور" class="w-full h-32 object-cover rounded-lg border border-gray-200 dark:border-neutral-700">
+                                            <img src="${AppSecurity.escapeHtml(safeImage)}" alt="صورة منشور" class="w-full h-32 object-cover rounded-lg border border-gray-200 dark:border-neutral-700">
                                             <div class="flex items-center justify-between gap-2 px-1">
-                                                <a href="${img}" target="_blank" rel="noopener" class="text-[10px] text-blue-700 dark:text-blue-400 underline">عرض</a>
-                                                <a href="${downloadHref}" download="${imageName}" class="inline-flex items-center gap-1 text-[10px] text-blue-700 dark:text-blue-400 underline">⬇</a>
+                                                <a href="${AppSecurity.escapeHtml(safeImage)}" target="_blank" rel="noopener noreferrer" class="text-[10px] text-blue-700 dark:text-blue-400 underline">عرض</a>
+                                                <a href="${AppSecurity.escapeHtml(downloadHref)}" download="${AppSecurity.escapeHtml(imageName)}" class="inline-flex items-center gap-1 text-[10px] text-blue-700 dark:text-blue-400 underline">⬇</a>
                                             </div>
                                         </div>
                                     `;
@@ -523,5 +526,6 @@
             }).join('');
         }
     </script>
+    <span aria-hidden="true" class="pointer-events-none fixed bottom-2 right-2 z-[25] select-none text-[9px] leading-none text-gray-500/50 dark:text-gray-400/45">الإصدار 2.11.0</span>
 </body>
 </html>
