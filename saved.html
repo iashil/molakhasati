@@ -155,6 +155,7 @@
                         <span>ChatGPT</span>
                     </a>
 
+                    <a href="chat.html" data-sidebar-item="messages" class="sidebar-item-enter flex items-center gap-3 rounded-xl px-3 py-3 font-medium text-sm text-gray-700 dark:text-gray-200 transition hover:bg-gray-100 dark:hover:bg-neutral-800"><span class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-lg text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">✉</span><span>الرسائل</span></a>
                     <a href="saved.html" data-sidebar-item="saved" class="sidebar-item-enter flex items-center gap-3 rounded-xl px-3 py-3 font-medium text-sm text-gray-700 dark:text-gray-200 transition hover:bg-gray-100 dark:hover:bg-neutral-800 bg-gray-100 dark:bg-neutral-800">
                         <span class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-lg text-gray-700 dark:bg-neutral-800 dark:text-gray-200">🔖</span>
                         <span>المحفوظات</span>
@@ -236,12 +237,10 @@
         if (firebaseConfigured) {
             firebase.initializeApp(FIREBASE_CONFIG);
             db = firebase.firestore();
-            firebaseAuthReady = firebase.auth().currentUser
-                ? Promise.resolve()
-                : firebase.auth().signInAnonymously().catch(error => {
-                    console.error('تعذر تفعيل Firebase Authentication:', error);
-                    return null;
-                });
+            firebaseAuthReady = ensureFirebaseAuth(firebase.auth()).catch(error => {
+                console.error('تعذر تفعيل Firebase Authentication:', error);
+                return null;
+            });
         }
 
         function getSafeProfileImageUrl(rawUrl) {

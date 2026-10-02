@@ -130,6 +130,7 @@
             <textarea id="bioInput" maxlength="240" rows="3" placeholder="مثال: طالب بالصف الأول ثانوي - مهتم بالرياضيات" class="w-full bg-gray-50 dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600 rounded-md p-3 text-xs outline-none resize-none"></textarea>
             <p id="bioDisplay" class="hidden mt-6 text-xs leading-relaxed text-gray-600 dark:text-gray-300"></p>
             <button id="saveProfileButton" onclick="saveProfile()" class="w-full mt-4 bg-gray-900 dark:bg-gray-100 dark:text-gray-900 text-white rounded-md py-2 text-xs font-bold">تعديل البروفايل</button>
+            <a id="profileChatButton" href="#" class="hidden mt-3 flex w-full items-center justify-center gap-2 rounded-md bg-blue-700 py-2.5 text-xs font-bold text-white dark:bg-blue-500 dark:text-neutral-950">✉ مراسلة هذا الحساب</a>
             <p id="profileStatus" class="text-xs text-center mt-3"></p>
         </section>
 
@@ -326,6 +327,10 @@
             document.getElementById('bioLabel').classList.toggle('hidden', !canEditProfile);
             document.getElementById('profileImageEdit').classList.toggle('hidden', !canEditProfile);
             document.getElementById('saveProfileButton').classList.toggle('hidden', !canEditProfile);
+            const chatButton = document.getElementById('profileChatButton');
+            const canMessage = !canEditProfile && !AppSecurity.isGuest(loggedInUser) && profileData.status !== 'banned';
+            chatButton.classList.toggle('hidden', !canMessage);
+            if (canMessage) chatButton.href = `chat.html?uid=${encodeURIComponent(profileData.id)}`;
             document.getElementById('bioDisplay').classList.toggle('hidden', canEditProfile);
             document.getElementById('profileImage').src = AppSecurity.safeImageUrl(profileData.photoURL) || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="96" height="96"%3E%3Crect width="100%25" height="100%25" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="55%25" text-anchor="middle" font-size="40"%3E%F0%9F%91%A4%3C/text%3E%3C/svg%3E';
             renderProfileStats();

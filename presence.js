@@ -1,6 +1,23 @@
 (function(global) {
     const PRESENCE_INTERVAL_MS = 30 * 1000;
 
+    global.ensureFirebaseAuth = function(auth) {
+        return new Promise((resolve, reject) => {
+            let unsubscribe = function() {};
+            unsubscribe = auth.onAuthStateChanged(user => {
+                unsubscribe();
+                if (user) {
+                    resolve(user);
+                    return;
+                }
+                auth.signInAnonymously().then(credential => resolve(credential.user)).catch(reject);
+            }, error => {
+                unsubscribe();
+                reject(error);
+            });
+        });
+    };
+
     function saveLocalPresence(userId, lastSeenAt) {
         const users = JSON.parse(localStorage.getItem('app_users') || '[]');
         const user = users.find(item => String(item.id) === String(userId));

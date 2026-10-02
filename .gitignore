@@ -1,0 +1,4 @@
+_site/
+.firebase/
+firebase-debug.log
+firestore-debug.log
