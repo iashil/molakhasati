@@ -1145,6 +1145,7 @@
         }
 
         function toggleBookmark(postId) {
+            if (AppSecurity.isGuest(currentUser)) return;
             const bookmarks = getBookmarks();
             const nextBookmarks = bookmarks.includes(postId)
                 ? bookmarks.filter(id => id !== postId)

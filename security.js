@@ -62,11 +62,15 @@
                 body.guest-mode main a[href*="cloudinary.com"],
                 body.guest-mode main a[href^="data:application/pdf"],
                 body.guest-mode main a:has(img:not(.rounded-full)) { display: none !important; }
+                body.guest-mode [data-bookmark-id],
+                body.guest-mode [data-toggle-saved-question] { display: none !important; }
                 body.guest-mode #postComposerModal,
                 body.guest-mode #openPostComposer,
                 body.guest-mode #questionForm,
                 body.guest-mode [data-answer-form],
                 body.guest-mode #profileImageEdit,
+                body.guest-mode #bioLabel,
+                body.guest-mode #bioInput,
                 body.guest-mode #saveProfileButton { display: none !important; }
             `;
             global.document.head.appendChild(style);
@@ -77,10 +81,17 @@
         if (!isGuest()) return;
         const link = event.target.closest('a');
         const downloadControl = event.target.closest('[download], [data-download-image]');
-        if (downloadControl || (link && (link.href.includes('cloudinary.com') || link.querySelector('img:not(.rounded-full)')))) {
+        const restrictedAction = event.target.closest('[data-bookmark-id], [data-toggle-saved-question], #saveProfileButton');
+        if (downloadControl || restrictedAction || (link && (link.href.includes('cloudinary.com') || link.querySelector('img:not(.rounded-full)')))) {
             event.preventDefault();
             event.stopImmediatePropagation();
         }
+    }, true);
+
+    global.document.addEventListener('submit', event => {
+        if (!isGuest()) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
     }, true);
 
     activateGuestView();

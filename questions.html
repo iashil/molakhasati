@@ -327,6 +327,7 @@
         }
 
         function toggleQuestionBookmark(questionId) {
+            if (AppSecurity.isGuest(currentUser)) return;
             const savedIds = getSavedQuestionIds();
             const nextIds = savedIds.includes(questionId)
                 ? savedIds.filter(id => id !== questionId)

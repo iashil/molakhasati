@@ -239,19 +239,21 @@
 
         function renderProfile() {
             if (!profileData) return;
+            const canEditProfile = isOwnProfile && !AppSecurity.isGuest(loggedInUser);
             document.getElementById('profileName').textContent = profileData.name || loggedInUser.name;
             document.getElementById('bioInput').value = profileData.bio || '';
             document.getElementById('bioDisplay').textContent = profileData.bio || 'لا توجد نبذة شخصية.';
-            document.getElementById('bioInput').classList.toggle('hidden', !isOwnProfile);
-            document.getElementById('bioLabel').classList.toggle('hidden', !isOwnProfile);
-            document.getElementById('profileImageEdit').classList.toggle('hidden', !isOwnProfile);
-            document.getElementById('saveProfileButton').classList.toggle('hidden', !isOwnProfile);
-            document.getElementById('bioDisplay').classList.toggle('hidden', isOwnProfile);
+            document.getElementById('bioInput').classList.toggle('hidden', !canEditProfile);
+            document.getElementById('bioLabel').classList.toggle('hidden', !canEditProfile);
+            document.getElementById('profileImageEdit').classList.toggle('hidden', !canEditProfile);
+            document.getElementById('saveProfileButton').classList.toggle('hidden', !canEditProfile);
+            document.getElementById('bioDisplay').classList.toggle('hidden', canEditProfile);
             document.getElementById('profileImage').src = AppSecurity.safeImageUrl(profileData.photoURL) || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="96" height="96"%3E%3Crect width="100%25" height="100%25" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="55%25" text-anchor="middle" font-size="40"%3E%F0%9F%91%A4%3C/text%3E%3C/svg%3E';
             renderPosts('posts');
         }
 
         document.getElementById('profileImageInput').addEventListener('change', async event => {
+            if (AppSecurity.isGuest(loggedInUser)) return;
             const file = event.target.files[0];
             if (!file) return;
             if (!/^image\/(?:png|jpeg|webp|gif)$/i.test(file.type) || file.size > 10 * 1024 * 1024) {
@@ -281,6 +283,7 @@
         });
 
         async function saveProfile() {
+            if (AppSecurity.isGuest(loggedInUser)) return;
             const button = document.getElementById('saveProfileButton');
             const status = document.getElementById('profileStatus');
             const user = profileData;
