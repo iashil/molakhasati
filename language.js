@@ -399,14 +399,15 @@
         const current = node.nodeValue;
         let record = textRecords.get(node);
         if (!record) {
-            record = { arabic: current, english: translateValue(current) };
+            record = { arabic: current, english: translateValue(current), rendered: current };
             textRecords.set(node, record);
-        } else if (current !== (language === 'en' ? record.english : record.arabic)) {
+        } else if (current !== record.rendered) {
             record.arabic = current;
             record.english = translateValue(current);
         }
         const next = language === 'en' ? record.english : record.arabic;
         if (current !== next) node.nodeValue = next;
+        record.rendered = next;
     }
 
     function processAttribute(element, name) {
@@ -420,14 +421,15 @@
         }
         let record = records.get(name);
         if (!record) {
-            record = { arabic: current, english: translateValue(current) };
+            record = { arabic: current, english: translateValue(current), rendered: current };
             records.set(name, record);
-        } else if (current !== (language === 'en' ? record.english : record.arabic)) {
+        } else if (current !== record.rendered) {
             record.arabic = current;
             record.english = translateValue(current);
         }
         const next = language === 'en' ? record.english : record.arabic;
         if (current !== next) element.setAttribute(name, next);
+        record.rendered = next;
     }
 
     function processElement(element) {
