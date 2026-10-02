@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="language.js"></script>
     <title>الدعم - منصة ملخصاتي</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -94,7 +95,7 @@
                 <article class="rounded-lg border border-gray-200 p-3 dark:border-neutral-700">
                     <div class="flex items-center justify-between gap-2">
                         <strong class="text-xs">${escapeHtml(item.name || 'مستخدم')}</strong>
-                        <time class="text-[10px] text-gray-400">${escapeHtml(new Date(item.createdAt || Date.now()).toLocaleString('ar-EG'))}</time>
+                        <time class="text-[10px] text-gray-400">${escapeHtml(new Date(item.createdAt || Date.now()).toLocaleString(window.getSiteLocale()))}</time>
                     </div>
                     <p class="mt-2 whitespace-pre-wrap break-words text-xs leading-relaxed text-gray-700 dark:text-gray-300">${escapeHtml(item.text || '')}</p>
                 </article>

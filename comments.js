@@ -21,7 +21,7 @@ function renderCommentItem(comment) {
         <article id="post-comment-${escapeCommentHtml(comment.id)}" data-comment-id="${escapeCommentHtml(comment.id)}" class="border-b border-gray-100 dark:border-neutral-700 py-2 last:border-0">
             <p class="text-[11px] font-semibold">${escapeCommentHtml(comment.authorName || 'مستخدم')}</p>
             <p class="text-xs leading-relaxed text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">${escapeCommentHtml(comment.text)}</p>
-            ${comment.createdAt ? `<time class="text-[10px] text-gray-400">${escapeCommentHtml(new Date(comment.createdAt).toLocaleString('ar-EG'))}</time>` : ''}
+            ${comment.createdAt ? `<time class="text-[10px] text-gray-400">${escapeCommentHtml(new Date(comment.createdAt).toLocaleString(window.getSiteLocale()))}</time>` : ''}
         </article>`;
 }
 

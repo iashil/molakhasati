@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="language.js"></script>
     <title>المحفوظات - منصة ملخصاتي</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -408,7 +409,7 @@
 
         function formatPostTime(time) {
             if (!time) return 'جارٍ الحفظ...';
-            if (typeof time.toDate === 'function') return time.toDate().toLocaleString('ar-EG');
+            if (typeof time.toDate === 'function') return time.toDate().toLocaleString(window.getSiteLocale());
             return AppSecurity.escapeHtml(time);
         }
 
@@ -603,6 +604,6 @@
             }).join('');
         }
     </script>
-    <span aria-hidden="true" class="pointer-events-none fixed bottom-2 right-2 z-[25] select-none text-[9px] leading-none text-gray-500/50 dark:text-gray-400/45">الإصدار 2.11.0</span>
+    <span aria-hidden="true" class="pointer-events-none fixed bottom-2 right-2 z-[25] select-none text-[9px] leading-none text-gray-500/50 dark:text-gray-400/45">الإصدار 2.12.0</span>
 </body>
 </html>

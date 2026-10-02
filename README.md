@@ -8,6 +8,10 @@ The project focuses on responsive design, usability, performance, and a clean mo
 
 Core technologies: Firebase Authentication, Cloud Firestore, Cloudinary, JavaScript, HTML, CSS, and Tailwind CSS.
 
+The interface supports Arabic and English. Use the language button at the bottom of any page to switch languages; the choice is saved in the browser and remains active across sign-in, guest access, and page navigation.
+
+New releases can introduce a one-time animated update intro and interactive feature tour. The tour is keyed by `UPDATE_ID` in `language.js`, saved per account (and synchronized to its Firestore user document when available) or per guest browser, and is also recorded when skipped. Bump `UPDATE_ID` and update the tour highlights when preparing a future release.
+
 ## Minified production site
 
 The GitHub Actions workflow builds the Jekyll site, minifies generated HTML and JavaScript into `_site`, then deploys that output to GitHub Pages. Set the repository's Pages source to **GitHub Actions** under **Settings > Pages > Build and deployment**. Source files remain readable in this repository for development.

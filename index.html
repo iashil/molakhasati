@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="language.js"></script>
     <title>منصة ملخصاتي - الصفحة الرئيسية</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
@@ -920,7 +921,7 @@
                     grade: grade,
                     subject: subject,
                     studyDate: studyDate,
-                    time: new Date().toLocaleString('ar-EG'),
+                    time: new Date().toLocaleString(window.getSiteLocale()),
                     text: text,
                     images: imageUrls,
                     pdf: selectedPdf ? {name: selectedPdf.name, data: pdfURL} : null
@@ -1066,13 +1067,13 @@
 
         function formatPostTime(time) {
             if (!time) return 'جارٍ الحفظ...';
-            if (typeof time.toDate === 'function') return time.toDate().toLocaleString('ar-EG');
+            if (typeof time.toDate === 'function') return time.toDate().toLocaleString(window.getSiteLocale());
             return escapeHtml(time);
         }
 
         function formatStudyDate(dateValue) {
             const date = new Date(`${dateValue}T00:00:00`);
-            return Number.isNaN(date.getTime()) ? escapeHtml(dateValue) : date.toLocaleDateString('ar-EG');
+            return Number.isNaN(date.getTime()) ? escapeHtml(dateValue) : date.toLocaleDateString(window.getSiteLocale());
         }
 
         function fileToDataUrl(file) {
@@ -1139,18 +1140,19 @@
                 const fontSize = Math.max(12, Math.min(42, Math.round(canvas.width * 0.022)));
                 const padding = Math.ceil(fontSize * 0.55);
                 const margin = Math.max(8, Math.ceil(fontSize * 0.65));
-                const watermark = 'منصة ملخصاتي';
+                const isEnglish = window.getSiteLocale() === 'en-US';
+                const watermark = isEnglish ? 'Molakhasati' : 'منصة ملخصاتي';
                 context.font = `600 ${fontSize}px Arial, sans-serif`;
-                context.direction = 'rtl';
-                context.textAlign = 'right';
+                context.direction = isEnglish ? 'ltr' : 'rtl';
+                context.textAlign = isEnglish ? 'left' : 'right';
                 context.textBaseline = 'top';
                 const textWidth = context.measureText(watermark).width;
                 const boxWidth = textWidth + padding * 2;
                 const boxHeight = fontSize + padding * 2;
                 context.fillStyle = 'rgba(15, 23, 42, 0.58)';
-                context.fillRect(canvas.width - margin - boxWidth, margin, boxWidth, boxHeight);
+                context.fillRect(isEnglish ? margin : canvas.width - margin - boxWidth, margin, boxWidth, boxHeight);
                 context.fillStyle = 'rgba(255, 255, 255, 0.92)';
-                context.fillText(watermark, canvas.width - margin - padding, margin + padding);
+                context.fillText(watermark, isEnglish ? margin + padding : canvas.width - margin - padding, margin + padding);
 
                 const outputType = ['image/jpeg', 'image/png', 'image/webp'].includes(sourceBlob.type)
                     ? sourceBlob.type
@@ -1358,6 +1360,6 @@
 
         listenForPosts();
     </script>
-    <span aria-hidden="true" class="pointer-events-none fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-2 z-[25] select-none text-[9px] leading-none text-gray-500/50 dark:text-gray-400/45">الإصدار 2.11.0</span>
+    <span aria-hidden="true" class="pointer-events-none fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-2 z-[25] select-none text-[9px] leading-none text-gray-500/50 dark:text-gray-400/45">الإصدار 2.12.0</span>
 </body>
 </html>
