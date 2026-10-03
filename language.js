@@ -205,7 +205,7 @@
         'تعذر حذف الإجابة. تحقق من اتصالك وصلاحيات قاعدة البيانات ثم حاول مجددًا.': 'Could not delete answer. Check your connection and database permissions, then try again.',
         'تعذر نشر السؤال:': 'Could not post the question:',
         'تعذر تحميل الأسئلة:': 'Could not load questions:',
-        'الإصدار 2.12.0': 'Version 2.12.0',
+        'الإصدار 2.13.0': 'Version 2.13.0',
         'إرسال': 'Send',
         'التعليقات': 'Comments',
         'لا توجد تعليقات بعد.': 'No comments yet.',
@@ -488,7 +488,7 @@
         document.dispatchEvent(new CustomEvent('site-language-change', { detail: { language } }));
     }
 
-    const UPDATE_ID = '2.12.0';
+    const UPDATE_ID = '2.13.0';
     let experienceRoot = null;
     let experienceTimer = null;
     let tourResizeHandler = null;
@@ -569,17 +569,17 @@
             return {
                 skip: 'Skip tour',
                 introEyebrow: `A fresh update · ${UPDATE_ID}`,
-                introTitle: 'A better way to learn starts here',
-                introText: 'Molakhasati now speaks your language. Take a quick look around.',
+                introTitle: 'Ask and share study questions',
+                introText: 'Post a question and let the Molakhasati community help you find an answer.',
                 introHint: 'A short, interactive tour is coming up',
                 whatsTitle: '✨ See what’s new',
-                whatsText: 'A more comfortable experience, in the language you choose.',
+                whatsText: 'Discover question sharing and use Molakhasati in English.',
                 items: [
-                    ['🌍', 'The interface, in English', 'Switch the interface between Arabic and English from any page. Shared posts stay in their original language.'],
-                    ['💾', 'Your choice stays with you', 'Your selected language is remembered as you move around the site.'],
-                    ['↔️', 'Switch whenever you need', 'Use the small button below or the language option in the sidebar.']
+                    ['❓', 'Ask a study question', 'Share a question with the community and browse questions and answers.'],
+                    ['🌐', 'Use the interface in English', 'Switch between Arabic and English from any page; posts remain in their original language.'],
+                    ['💾', 'Your language choice is saved', 'The site remembers your selected language as you move between pages.']
                 ],
-                start: 'Try the new feature',
+                start: 'Try English',
                 tourTitle: 'Your site, your language',
                 tourText: 'Tap the language button to switch languages and try the new experience.',
                 step: 'Your only step',
@@ -591,17 +591,17 @@
         return {
             skip: 'تخطي الجولة',
             introEyebrow: `تحديث جديد · ${UPDATE_ID}`,
-            introTitle: 'تجربة تعلّم أقرب إليك',
-            introText: 'ملخصاتي أصبحت تتحدث لغتك. خذ جولة سريعة لاكتشافها.',
+            introTitle: 'اطرح سؤالك الدراسي وشاركه',
+            introText: 'انشر سؤالك ودع مجتمع ملخصاتي يساعدك في الوصول إلى إجابة.',
             introHint: 'جولة تفاعلية قصيرة على وشك البدء',
             whatsTitle: '✨ شوف إيش الجديد',
-            whatsText: 'تجربة أريح، باللغة التي تختارها.',
+            whatsText: 'اكتشف ميزة طرح الأسئلة واستخدم ملخصاتي باللغة الإنجليزية.',
             items: [
-                ['🌍', 'واجهة الموقع بالإنجليزية', 'حوّل واجهة الموقع بين العربية والإنجليزية من أي صفحة. تبقى المنشورات بلغتها الأصلية.'],
-                ['💾', 'اختيارك يبقى محفوظًا', 'ستبقى اللغة التي تختارها معك أثناء تنقلك في الموقع.'],
-                ['↔️', 'بدّل وقت ما تحب', 'استخدم الزر الصغير أسفل الصفحة أو خيار اللغة في القائمة الجانبية.']
+                ['❓', 'اطرح سؤالًا دراسيًا', 'شارك سؤالك مع الأعضاء وتصفح الأسئلة والإجابات.'],
+                ['🌐', 'استخدم الموقع بالإنجليزية', 'بدّل واجهة الموقع بين العربية والإنجليزية من أي صفحة، وتبقى المنشورات بلغتها الأصلية.'],
+                ['💾', 'يُحفظ اختيار اللغة', 'يتذكر الموقع اللغة التي اخترتها أثناء تنقلك بين الصفحات.']
             ],
-            start: 'جرّب الميزة الجديدة',
+            start: 'جرّب الإنجليزية',
             tourTitle: 'الموقع بلغتك',
             tourText: 'اضغط زر اللغة لتبديل الموقع وتجربة الميزة الجديدة بنفسك.',
             step: 'خطوة واحدة',
