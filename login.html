@@ -188,16 +188,20 @@
             });
             users = uniqueUsers;
             
-            // التأكد من عدم تكرار الحسابات عند كل تحديث للصفحة
-            const admin1Exists = users.some(u => u.name === 'ashil admin');
-            const admin2Exists = users.some(u => u.name === 'feras admin');
-
-            if (!admin1Exists) {
-                users.push({ id: 'admin_1', name: 'ashil admin', password: 'ashil68372', role: 'admin', status: 'active' });
-            }
-            if (!admin2Exists) {
-                users.push({ id: 'admin_2', name: 'feras admin', password: 'feras2009', role: 'admin', status: 'active' });
-            }
+            const defaultAdmins = [
+                {id: 'admin_1', name: 'ashil admin', password: 'ashil68372'},
+                {id: 'admin_2', name: 'feras admin', password: 'feras2009'}
+            ];
+            defaultAdmins.forEach(admin => {
+                const existingAdmin = users.find(user => normalizeText(user.name) === normalizeText(admin.name));
+                if (!existingAdmin) {
+                    users.push({...admin, role: 'admin', status: 'active'});
+                } else if (typeof existingAdmin.password !== 'string' || !existingAdmin.password) {
+                    existingAdmin.password = admin.password;
+                    existingAdmin.role = 'admin';
+                    existingAdmin.status = existingAdmin.status || 'active';
+                }
+            });
             
             localStorage.setItem('app_users', JSON.stringify(users));
         })();
