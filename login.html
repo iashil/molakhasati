@@ -217,7 +217,7 @@
             let binary = '';
             bytes.forEach(byte => { binary += String.fromCharCode(byte); });
             const alias = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-            return `u-${alias}@accounts.molakhasati.app`;
+            return `u-${alias.toLowerCase()}@accounts.molakhasati.app`;
         }
 
         function setFormError(element, message) {

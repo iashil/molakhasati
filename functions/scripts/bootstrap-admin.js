@@ -5,10 +5,10 @@ const {getAuth} = require('firebase-admin/auth');
 const {FieldValue, getFirestore} = require('firebase-admin/firestore');
 
 const USERNAME = 'ashil admin';
-const UID = 'admin_1';
+const DEFAULT_UID = 'admin_1';
 const DOMAIN = 'accounts.molakhasati.app';
 const usernameKey = Buffer.from(USERNAME.normalize('NFC').trim().toLocaleLowerCase('ar'), 'utf8').toString('base64url');
-const email = `u-${usernameKey}@${DOMAIN}`;
+const email = `u-${usernameKey.toLowerCase()}@${DOMAIN}`;
 
 function readPassword() {
     return new Promise((resolve, reject) => {
@@ -52,18 +52,34 @@ async function main() {
     const db = getFirestore();
     const usernameRef = db.collection('account_usernames').doc(usernameKey);
     const usernameDoc = await usernameRef.get();
-    if (usernameDoc.exists && usernameDoc.data().uid !== UID) {
-        throw new Error('The admin username is already linked to a different account.');
+    const uid = usernameDoc.exists ? String(usernameDoc.data().uid || '') : DEFAULT_UID;
+    if (!uid || uid.length > 128) {
+        throw new Error('The admin username is linked to an invalid account ID.');
     }
+
+    const userRef = db.collection('users').doc(uid);
+    const userDoc = await userRef.get();
+    if (userDoc.exists && (userDoc.data().role !== 'admin' || userDoc.data().name !== USERNAME)) {
+        throw new Error('Refusing to reset credentials for an account that is not the configured administrator.');
+    }
+
+    let authUser;
     try {
-        await auth.createUser({uid: UID, email, password, displayName: USERNAME});
+        authUser = await auth.getUser(uid);
     } catch (error) {
-        if (error.code !== 'auth/uid-already-exists' && error.code !== 'auth/email-already-exists') throw error;
-        await auth.updateUser(UID, {email, password, displayName: USERNAME, disabled: false});
+        if (error.code !== 'auth/user-not-found') throw error;
     }
-    await auth.setCustomUserClaims(UID, {account: true, admin: true});
+    if (authUser) {
+        if (authUser.email !== email) {
+            throw new Error('The configured admin ID belongs to a different Firebase Authentication account.');
+        }
+        await auth.updateUser(uid, {password, displayName: USERNAME, disabled: false});
+    } else {
+        await auth.createUser({uid, email, password, displayName: USERNAME});
+    }
+    await auth.setCustomUserClaims(uid, {account: true, admin: true});
     const batch = db.batch();
-    batch.set(db.collection('users').doc(UID), {
+    batch.set(userRef, {
         name: USERNAME,
         role: 'admin',
         status: 'active',
@@ -72,7 +88,7 @@ async function main() {
         updatedAt: FieldValue.serverTimestamp()
     }, {merge: true});
     batch.set(usernameRef, {
-        uid: UID,
+        uid,
         username: USERNAME,
         updatedAt: FieldValue.serverTimestamp()
     });

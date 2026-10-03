@@ -26,18 +26,7 @@ function usernameKey(username) {
 }
 
 function usernameEmail(username) {
-    return `u-${usernameKey(username)}@${USERNAME_DOMAIN}`;
-}
-
-function usernameFromEmail(email) {
-    const match = String(email || '').match(new RegExp(`^u-([a-zA-Z0-9_-]+)@${USERNAME_DOMAIN.replaceAll('.', '\\.')}$`));
-    if (!match) return '';
-    try {
-        return normalizeUsername(Buffer.from(match[1], 'base64url').toString('utf8'));
-    } catch (error) {
-        console.error('Could not decode username alias:', error);
-        return '';
-    }
+    return `u-${usernameKey(username).toLowerCase()}@${USERNAME_DOMAIN}`;
 }
 
 function requireSignedIn(request) {
@@ -213,7 +202,7 @@ exports.completeAccountRegistration = onCall(async request => {
     if (!USERNAME_PATTERN.test(username) || !ALLOWED_USERNAMES.has(username)) {
         throw new HttpsError('invalid-argument', 'اسم المستخدم غير مصرح له بالتسجيل.');
     }
-    if (usernameFromEmail(identity.token.email) !== username) {
+    if (String(identity.token.email || '').toLowerCase() !== usernameEmail(username)) {
         throw new HttpsError('permission-denied', 'اسم المستخدم لا يطابق حساب Firebase.');
     }
 
