@@ -625,19 +625,19 @@
     function experienceCopy() {
         if (language === 'en') {
             return {
-                skip: 'Skip tour',
+                skip: 'Close update',
                 introEyebrow: `A fresh update · ${UPDATE_ID}`,
-                introTitle: 'A better way to learn starts here',
-                introText: 'Molakhasati now speaks your language. Take a quick look around.',
-                introHint: 'A short, interactive tour is coming up',
+                introTitle: 'Meet your new messages',
+                introText: 'You can now have text conversations with other members on Molakhasati.',
+                introHint: 'Here’s what’s new in version 3.11.0',
                 whatsTitle: '✨ See what’s new',
-                whatsText: 'A more comfortable experience, in the language you choose.',
+                whatsText: 'A simple, text-only way to keep in touch.',
                 items: [
-                    ['🌍', 'The interface, in English', 'Switch the interface between Arabic and English from any page. Shared posts stay in their original language.'],
-                    ['💾', 'Your choice stays with you', 'Your selected language is remembered as you move around the site.'],
-                    ['↔️', 'Switch whenever you need', 'Use the small button below or the language option in the sidebar.']
+                    ['💬', 'Text chat is here', 'Start a conversation with another registered member. Messages are text only—no images, files, or calls.'],
+                    ['⏳', 'Messages disappear after 24 hours', 'Messages disappear from the chat after 24 hours. Final deletion from Firebase may take longer.'],
+                    ['🌍', 'Use Molakhasati in your language', 'Switch the interface between Arabic and English from any page.']
                 ],
-                start: 'Try the new feature',
+                start: 'Continue to Molakhasati',
                 tourTitle: 'Your site, your language',
                 tourText: 'Tap the language button to switch languages and try the new experience.',
                 step: 'Your only step',
@@ -647,19 +647,19 @@
             };
         }
         return {
-            skip: 'تخطي الجولة',
+            skip: 'إغلاق التحديث',
             introEyebrow: `تحديث جديد · ${UPDATE_ID}`,
-            introTitle: 'تجربة تعلّم أقرب إليك',
-            introText: 'ملخصاتي أصبحت تتحدث لغتك. خذ جولة سريعة لاكتشافها.',
-            introHint: 'جولة تفاعلية قصيرة على وشك البدء',
+            introTitle: 'تعرّف على الرسائل الجديدة',
+            introText: 'أصبح بإمكانك الآن إجراء محادثات نصية مع الأعضاء في ملخصاتي.',
+            introHint: 'إليك الجديد في التحديث 3.11.0',
             whatsTitle: '✨ شوف إيش الجديد',
-            whatsText: 'تجربة أريح، باللغة التي تختارها.',
+            whatsText: 'طريقة بسيطة للتواصل، بالنص فقط.',
             items: [
-                ['🌍', 'واجهة الموقع بالإنجليزية', 'حوّل واجهة الموقع بين العربية والإنجليزية من أي صفحة. تبقى المنشورات بلغتها الأصلية.'],
-                ['💾', 'اختيارك يبقى محفوظًا', 'ستبقى اللغة التي تختارها معك أثناء تنقلك في الموقع.'],
-                ['↔️', 'بدّل وقت ما تحب', 'استخدم الزر الصغير أسفل الصفحة أو خيار اللغة في القائمة الجانبية.']
+                ['💬', 'الدردشة النصية أصبحت متاحة', 'ابدأ محادثة مع عضو مسجل. المحادثات نصية فقط، ولا تدعم الصور أو الملفات أو المكالمات.'],
+                ['⏳', 'تختفي الرسائل بعد 24 ساعة', 'تختفي الرسائل من المحادثة بعد 24 ساعة، وقد يستغرق حذفها النهائي من Firebase وقتًا إضافيًا.'],
+                ['🌍', 'استخدم ملخصاتي بلغتك', 'يمكنك التبديل بين واجهتي الموقع العربية والإنجليزية من أي صفحة.']
             ],
-            start: 'جرّب الميزة الجديدة',
+            start: 'متابعة إلى ملخصاتي',
             tourTitle: 'الموقع بلغتك',
             tourText: 'اضغط زر اللغة لتبديل الموقع وتجربة الميزة الجديدة بنفسك.',
             step: 'خطوة واحدة',
@@ -759,7 +759,7 @@
                 <div class="update-feature-list">${items}</div>
                 <button type="button" class="update-primary-action">${copy.start}<span aria-hidden="true"> →</span></button>
             </section>`, 'update-stage-whats');
-        experienceRoot.querySelector('.update-primary-action').addEventListener('click', startFeatureTour);
+        experienceRoot.querySelector('.update-primary-action').addEventListener('click', closeExperience);
     }
 
     function renderSpotlight() {
