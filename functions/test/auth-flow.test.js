@@ -105,7 +105,27 @@ async function main() {
         assert.equal(adminSession.data.username, adminName);
         assert.equal(adminSession.data.role, 'admin');
 
-        console.log('Auth emulator tests passed: صالح registration/sign-in, synthetic admin sign-in, wrong password, duplicate registration, and legacy-account protection.');
+        await auth.signOut();
+        const interruptedUsername = 'مهاب';
+        const interruptedCredential = await auth.createUserWithEmailAndPassword(
+            usernameEmail(interruptedUsername),
+            password
+        );
+        await auth.signOut();
+        const retryCredential = await auth.signInWithEmailAndPassword(
+            usernameEmail(interruptedUsername),
+            password
+        );
+        const retryToken = await retryCredential.user.getIdTokenResult();
+        assert.equal(retryToken.claims.account, undefined);
+        await functions.httpsCallable('completeAccountRegistration')({username: interruptedUsername});
+        await retryCredential.user.getIdToken(true);
+        const recoveredSession = await functions.httpsCallable('validateAccountSession')();
+        assert.equal(recoveredSession.data.uid, interruptedCredential.user.uid);
+        assert.equal(recoveredSession.data.username, interruptedUsername);
+        assert.equal(recoveredSession.data.role, 'user');
+
+        console.log('Auth emulator tests passed: صالح registration/sign-in, synthetic admin sign-in, interrupted-registration recovery, wrong password, duplicate registration, and legacy-account protection.');
     } finally {
         await auth.signOut();
         await app.delete();

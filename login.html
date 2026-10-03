@@ -225,6 +225,25 @@
             element.classList.remove('hidden');
         }
 
+        function accountServiceError(error) {
+            return error && [
+                'functions/not-found',
+                'functions/unavailable',
+                'functions/internal',
+                'functions/deadline-exceeded',
+                'functions/unknown'
+            ].includes(error.code);
+        }
+
+        async function verifyAccountService() {
+            try {
+                await functions.httpsCallable('validateAccountSession')();
+            } catch (error) {
+                if (error.code === 'functions/unauthenticated') return;
+                throw error;
+            }
+        }
+
         function saveSignedInUser(session) {
             const user = {
                 id: session.uid,
@@ -265,11 +284,19 @@
             try {
                 if (!auth || !functions) throw new Error('firebase/not-configured');
                 if (auth.currentUser) await auth.signOut();
+                await verifyAccountService();
                 const credential = await auth.createUserWithEmailAndPassword(usernameEmail(rawName), password);
                 try {
                     await functions.httpsCallable('completeAccountRegistration')({username: rawName});
                 } catch (error) {
-                    await credential.user.delete().catch(deleteError => console.error('تعذر حذف حساب التسجيل غير المكتمل:', deleteError));
+                    if ([
+                        'functions/invalid-argument',
+                        'functions/permission-denied',
+                        'functions/already-exists',
+                        'functions/failed-precondition'
+                    ].includes(error.code)) {
+                        await credential.user.delete().catch(deleteError => console.error('تعذر حذف حساب التسجيل المرفوض:', deleteError));
+                    }
                     throw error;
                 }
                 await credential.user.getIdToken(true);
@@ -281,6 +308,8 @@
                     ? 'هذا حساب قديم. تواصل مع الأدمن لإعادة ضبط كلمة المرور قبل التسجيل.'
                     : error.code === 'auth/email-already-in-use' || error.code === 'functions/already-exists'
                         ? 'هذا الاسم مسجل بالفعل. تواصل مع الأدمن إذا كان حسابك قديمًا.'
+                        : accountServiceError(error)
+                            ? 'خدمة الحسابات غير متاحة على الموقع حاليًا. حاول مجددًا بعد تفعيل خدمة Firebase.'
                         : error.code === 'firebase/not-configured'
                             ? 'خدمة الحسابات غير مهيأة بعد.'
                             : 'تعذر إنشاء الحساب الآن. تحقق من الاتصال وحاول مجددًا.';
@@ -301,6 +330,11 @@
                 if (!auth || !functions) throw new Error('firebase/not-configured');
                 if (auth.currentUser) await auth.signOut();
                 const credential = await auth.signInWithEmailAndPassword(usernameEmail(rawName), password);
+                const tokenResult = await credential.user.getIdTokenResult();
+                if (tokenResult.claims.account !== true && tokenResult.claims.admin !== true) {
+                    await functions.httpsCallable('completeAccountRegistration')({username: rawName});
+                    await credential.user.getIdToken(true);
+                }
                 const result = await functions.httpsCallable('validateAccountSession')();
                 await credential.user.getIdToken(true);
                 saveSignedInUser(result.data);
@@ -309,6 +343,10 @@
                 if (auth && auth.currentUser) await auth.signOut().catch(signOutError => console.error('تعذر إنهاء جلسة الدخول الفاشلة:', signOutError));
                 const message = error.code === 'functions/permission-denied' && /محظور/.test(error.message || '')
                     ? 'تم حظر هذا الحساب من استخدام المنصة.'
+                    : accountServiceError(error)
+                        ? 'تعذر التحقق من الحساب لأن خدمة Firebase غير منشورة أو غير متاحة حاليًا.'
+                    : error.code === 'functions/failed-precondition'
+                        ? 'هذا حساب قديم. تواصل مع الأدمن لإعادة ضبط كلمة المرور قبل تسجيل الدخول.'
                     : error.code === 'functions/permission-denied' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential'
                         ? 'تعذر الدخول. إن كان حسابك قديمًا، تواصل مع الأدمن لإعادة ضبط كلمة المرور.'
                         : error.code === 'firebase/not-configured'

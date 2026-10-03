@@ -35,6 +35,8 @@ The sign-in migration replaces browser-stored passwords with Firebase Authentica
 
 One-time setup for the new authentication backend:
 
+The Firebase Functions must be deployed before password sign-in or account registration can complete. If a callable endpoint is missing, the login page will report that the account service is unavailable and will not create a new account during registration.
+
 1. Enable **Email/Password** and **Anonymous** providers in Firebase Authentication. Add the production Pages host under **Authorized domains**.
 2. Install the Firebase CLI, authenticate as a project deployer, and run `npm install --prefix functions`.
 3. Deploy the Functions, Firestore rules, and required collection-group index with `firebase deploy --only functions,firestore:rules,firestore:indexes --project molakhasat-web`. Back up and review the live project's current rules before deployment; Firestore deployment replaces them with this file. This file protects chat, account, and admin-audit collections while retaining the app's current posts/questions/support features.
