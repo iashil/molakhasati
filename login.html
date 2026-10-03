@@ -14,9 +14,7 @@
         }
     </script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-900 dark:bg-neutral-900 dark:text-gray-100 min-h-screen flex items-center justify-center p-4 transition-colors duration-300">
 
@@ -86,7 +84,7 @@
             <div>
                 <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">كلمة المرور</label>
                 <div class="relative">
-                    <input type="password" id="loginPassword" minlength="8" maxlength="128" required dir="auto" class="w-full bg-gray-50 dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 rounded-md p-2 pl-8 text-xs outline-none focus:border-gray-600 dark:focus:border-gray-400">
+                    <input type="password" id="loginPassword" required dir="auto" class="w-full bg-gray-50 dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 rounded-md p-2 pl-8 text-xs outline-none focus:border-gray-600 dark:focus:border-gray-400">
                     <button type="button" onclick="togglePass('loginPassword', this)" class="absolute left-2 top-1/2 -translate-y-1/2 text-xs opacity-60 hover:opacity-100 select-none">👁️</button>
                 </div>
             </div>
@@ -105,7 +103,7 @@
             <div>
                 <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">كلمة المرور الجديدة</label>
                 <div class="relative">
-                    <input type="password" id="regPassword" minlength="8" maxlength="128" required dir="auto" class="w-full bg-gray-50 dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 rounded-md p-2 pl-8 text-xs outline-none focus:border-gray-600 dark:focus:border-gray-400">
+                    <input type="password" id="regPassword" required dir="auto" class="w-full bg-gray-50 dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 rounded-md p-2 pl-8 text-xs outline-none focus:border-gray-600 dark:focus:border-gray-400">
                     <button type="button" onclick="togglePass('regPassword', this)" class="absolute left-2 top-1/2 -translate-y-1/2 text-xs opacity-60 hover:opacity-100 select-none">👁️</button>
                 </div>
             </div>
@@ -132,13 +130,9 @@
         };
         const firebaseConfigured = Object.values(FIREBASE_CONFIG).every(value => !value.includes('ضع_'));
         let db = null;
-        let auth = null;
-        let functions = null;
         if (firebaseConfigured) {
             firebase.initializeApp(FIREBASE_CONFIG);
             db = firebase.firestore();
-            auth = firebase.auth();
-            functions = firebase.app().functions('us-central1');
         }
 
         const allowedNames = ["اصيل", "صلاح", "محمد", "رشاد", "ابوبكر", "حسين", "احمد", "معتز", "منير", "سالم", "مهاب", "فراس", "شهاب", "عمار", "عبد الحكيم", "هيثم ابراهيم", "صالح", "سيف", "باوزير", "جراح", "جمال"];
@@ -172,21 +166,40 @@
             return forbiddenWords.some(word => lowerText.includes(word.toLowerCase()));
         }
 
+        const currentUser = JSON.parse(localStorage.getItem('current_user'));
+        if (currentUser) {
+            // تم إصلاح هذا السطر ليعمل بشكل صحيح
+            if (currentUser.role === 'admin') window.location.href = 'admin.html';
+            else window.location.href = 'index.html';
+        }
+
         (function initDB() {
-            try {
-                const users = JSON.parse(localStorage.getItem('app_users') || '[]')
-                    .filter(user => user && typeof user === 'object')
-                    .map(({password, ...user}) => user);
-                localStorage.setItem('app_users', JSON.stringify(users));
-                const currentUser = JSON.parse(localStorage.getItem('current_user') || 'null');
-                if (currentUser && Object.hasOwn(currentUser, 'password')) {
-                    delete currentUser.password;
-                    localStorage.setItem('current_user', JSON.stringify(currentUser));
+            let users = JSON.parse(localStorage.getItem('app_users') || '[]');
+            users = users.filter(u => u.name.toLowerCase() !== 'admin');
+
+            const uniqueUsers = [];
+            users.forEach(user => {
+                const existingUser = uniqueUsers.find(existing => normalizeText(existing.name) === normalizeText(user.name));
+                if (!existingUser) {
+                    uniqueUsers.push(user);
+                } else if (user.lastLoginAt && (!existingUser.lastLoginAt || user.lastLoginAt > existingUser.lastLoginAt)) {
+                    existingUser.lastLoginAt = user.lastLoginAt;
                 }
-            } catch (error) {
-                console.error('تعذر تنظيف الحسابات المحلية القديمة:', error);
-                localStorage.removeItem('app_users');
+            });
+            users = uniqueUsers;
+            
+            // التأكد من عدم تكرار الحسابات عند كل تحديث للصفحة
+            const admin1Exists = users.some(u => u.name === 'ashil admin');
+            const admin2Exists = users.some(u => u.name === 'feras admin');
+
+            if (!admin1Exists) {
+                users.push({ id: 'admin_1', name: 'ashil admin', password: 'ashil68372', role: 'admin', status: 'active' });
             }
+            if (!admin2Exists) {
+                users.push({ id: 'admin_2', name: 'feras admin', password: 'feras2009', role: 'admin', status: 'active' });
+            }
+            
+            localStorage.setItem('app_users', JSON.stringify(users));
         })();
 
         function switchTab(tab) {
@@ -209,57 +222,7 @@
         }
 
         function normalizeText(text) {
-            return text.normalize('NFC').trim().toLocaleLowerCase('ar');
-        }
-
-        function usernameEmail(username) {
-            const bytes = new TextEncoder().encode(normalizeText(username));
-            let binary = '';
-            bytes.forEach(byte => { binary += String.fromCharCode(byte); });
-            const alias = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-            return `u-${alias.toLowerCase()}@accounts.molakhasati.app`;
-        }
-
-        function setFormError(element, message) {
-            element.textContent = message;
-            element.classList.remove('hidden');
-        }
-
-        function accountServiceError(error) {
-            return error && [
-                'functions/not-found',
-                'functions/unavailable',
-                'functions/internal',
-                'functions/deadline-exceeded',
-                'functions/unknown'
-            ].includes(error.code);
-        }
-
-        async function verifyAccountService() {
-            try {
-                await functions.httpsCallable('validateAccountSession')();
-            } catch (error) {
-                if (error.code === 'functions/unauthenticated') return;
-                throw error;
-            }
-        }
-
-        function saveSignedInUser(session) {
-            const user = {
-                id: session.uid,
-                name: session.username,
-                role: session.role,
-                status: session.status || 'active',
-                isGuest: false,
-                lastLoginAt: new Date().toISOString()
-            };
-            const users = JSON.parse(localStorage.getItem('app_users') || '[]')
-                .filter(existing => String(existing.id) !== String(user.id))
-                .map(({password, ...existing}) => existing);
-            users.push(user);
-            localStorage.setItem('app_users', JSON.stringify(users));
-            localStorage.setItem('current_user', JSON.stringify(user));
-            window.location.href = user.role === 'admin' ? 'admin.html' : 'index.html';
+            return text.trim().toLowerCase();
         }
 
         document.getElementById('registerForm').addEventListener('submit', async function(e) {
@@ -267,56 +230,50 @@
             const rawName = document.getElementById('regName').value.trim();
             const password = document.getElementById('regPassword').value;
             const errorDiv = document.getElementById('regError');
+
             const normalizedName = normalizeText(rawName);
+
+            if (normalizedName === 'admin' || normalizedName.includes('admin')) {
+                errorDiv.textContent = 'لا يمكنك إنشاء حساب بهذه الصلاحية من هنا.';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
 
             const isAllowed = allowedNames.some(name => normalizeText(name) === normalizedName);
             if (!isAllowed) {
-                setFormError(errorDiv, 'عذراً، هذا الاسم غير مصرح له بإنشاء حساب.');
-                return;
-            }
-            if (password.length < 8 || password.length > 128) {
-                setFormError(errorDiv, 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.');
+                errorDiv.textContent = 'عذراً، هذا الاسم غير مصرح له بإنشاء حساب.';
+                errorDiv.classList.remove('hidden');
                 return;
             }
 
-            const button = this.querySelector('button[type="submit"]');
-            button.disabled = true;
-            try {
-                if (!auth || !functions) throw new Error('firebase/not-configured');
-                if (auth.currentUser) await auth.signOut();
-                await verifyAccountService();
-                const credential = await auth.createUserWithEmailAndPassword(usernameEmail(rawName), password);
-                try {
-                    await functions.httpsCallable('completeAccountRegistration')({username: rawName});
-                } catch (error) {
-                    if ([
-                        'functions/invalid-argument',
-                        'functions/permission-denied',
-                        'functions/already-exists',
-                        'functions/failed-precondition'
-                    ].includes(error.code)) {
-                        await credential.user.delete().catch(deleteError => console.error('تعذر حذف حساب التسجيل المرفوض:', deleteError));
-                    }
-                    throw error;
-                }
-                await credential.user.getIdToken(true);
-                const result = await functions.httpsCallable('validateAccountSession')();
-                saveSignedInUser(result.data);
-            } catch (error) {
-                console.error('تعذر إنشاء الحساب الموثق:', error);
-                const message = error.code === 'functions/failed-precondition'
-                    ? 'هذا حساب قديم. تواصل مع الأدمن لإعادة ضبط كلمة المرور قبل التسجيل.'
-                    : error.code === 'auth/email-already-in-use' || error.code === 'functions/already-exists'
-                        ? 'هذا الاسم مسجل بالفعل. تواصل مع الأدمن إذا كان حسابك قديمًا.'
-                        : accountServiceError(error)
-                            ? 'خدمة الحسابات غير متاحة على الموقع حاليًا. حاول مجددًا بعد تفعيل خدمة Firebase.'
-                        : error.code === 'firebase/not-configured'
-                            ? 'خدمة الحسابات غير مهيأة بعد.'
-                            : 'تعذر إنشاء الحساب الآن. تحقق من الاتصال وحاول مجددًا.';
-                setFormError(errorDiv, message);
-            } finally {
-                button.disabled = false;
+            const users = JSON.parse(localStorage.getItem('app_users') || '[]');
+            const nameExists = users.some(u => normalizeText(u.name) === normalizedName);
+            if (nameExists) {
+                errorDiv.textContent = 'هذا الاسم مسجل بالفعل، يرجى تسجيل الدخول.';
+                errorDiv.classList.remove('hidden');
+                return;
             }
+
+            const newUser = {
+                id: 'user_' + Date.now(),
+                name: rawName,
+                password: password,
+                role: 'user',
+                status: 'active',
+                lastLoginAt: new Date().toISOString()
+            };
+
+            users.push(newUser);
+            localStorage.setItem('app_users', JSON.stringify(users));
+            localStorage.setItem('current_user', JSON.stringify(newUser));
+            if (db) await db.collection('users').doc(newUser.id).set({
+                name: newUser.name,
+                role: newUser.role,
+                status: newUser.status,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            window.location.href = 'index.html';
         });
 
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
@@ -324,63 +281,61 @@
             const rawName = document.getElementById('loginName').value.trim();
             const password = document.getElementById('loginPassword').value;
             const errorDiv = document.getElementById('loginError');
-            const button = this.querySelector('button[type="submit"]');
-            button.disabled = true;
-            try {
-                if (!auth || !functions) throw new Error('firebase/not-configured');
-                if (auth.currentUser) await auth.signOut();
-                const credential = await auth.signInWithEmailAndPassword(usernameEmail(rawName), password);
-                const tokenResult = await credential.user.getIdTokenResult();
-                if (tokenResult.claims.account !== true && tokenResult.claims.admin !== true) {
-                    await functions.httpsCallable('completeAccountRegistration')({username: rawName});
-                    await credential.user.getIdToken(true);
-                }
-                const result = await functions.httpsCallable('validateAccountSession')();
-                await credential.user.getIdToken(true);
-                saveSignedInUser(result.data);
-            } catch (error) {
-                console.error('تعذر تسجيل الدخول:', error);
-                if (auth && auth.currentUser) await auth.signOut().catch(signOutError => console.error('تعذر إنهاء جلسة الدخول الفاشلة:', signOutError));
-                const message = error.code === 'functions/permission-denied' && /محظور/.test(error.message || '')
-                    ? 'تم حظر هذا الحساب من استخدام المنصة.'
-                    : accountServiceError(error)
-                        ? 'تعذر التحقق من الحساب لأن خدمة Firebase غير منشورة أو غير متاحة حاليًا.'
-                    : error.code === 'functions/failed-precondition'
-                        ? 'هذا حساب قديم. تواصل مع الأدمن لإعادة ضبط كلمة المرور قبل تسجيل الدخول.'
-                    : error.code === 'functions/permission-denied' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential'
-                        ? 'تعذر الدخول. إن كان حسابك قديمًا، تواصل مع الأدمن لإعادة ضبط كلمة المرور.'
-                        : error.code === 'firebase/not-configured'
-                            ? 'خدمة الحسابات غير مهيأة بعد.'
-                            : 'تعذر تسجيل الدخول. تحقق من الاسم وكلمة المرور وحاول مجددًا.';
-                setFormError(errorDiv, message);
-            } finally {
-                button.disabled = false;
+
+            const users = JSON.parse(localStorage.getItem('app_users') || '[]');
+            const normalizedName = normalizeText(rawName);
+
+            const user = users.find(u => normalizeText(u.name) === normalizedName && u.password === password);
+
+            if (!user) {
+                errorDiv.textContent = 'الاسم أو كلمة المرور غير صحيحة.';
+                errorDiv.classList.remove('hidden');
+                return;
             }
+
+            if (user.status === 'banned') {
+                errorDiv.textContent = 'تم حظر هذا الحساب من استخدام المنصة.';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            user.lastLoginAt = new Date().toISOString();
+            localStorage.setItem('app_users', JSON.stringify(users));
+            localStorage.setItem('current_user', JSON.stringify(user));
+            if (db) await db.collection('users').doc(user.id).set({
+                name: user.name,
+                role: user.role,
+                status: user.status,
+                lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, {merge: true});
+            if (user.role === 'admin') window.location.href = 'admin.html';
+            else window.location.href = 'index.html';
         });
 
         document.getElementById('guestLoginButton').addEventListener('click', async function() {
             this.disabled = true;
             this.textContent = 'جارٍ الدخول...';
+            const guestId = `guest_${typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Date.now()}`;
+            const guest = {
+                id: guestId,
+                name: '',
+                role: 'guest',
+                isGuest: true,
+                status: 'active',
+                lastLoginAt: new Date().toISOString()
+            };
+
             try {
-                if (!auth || !db) throw new Error('firebase/not-configured');
-                if (auth.currentUser) await auth.signOut();
-                const credential = await auth.signInAnonymously();
-                const guest = {
-                    id: credential.user.uid,
-                    name: '',
-                    role: 'guest',
-                    isGuest: true,
-                    status: 'active',
-                    lastLoginAt: new Date().toISOString()
-                };
-                await db.collection('users').doc(guest.id).set({
-                    name: '',
-                    role: 'guest',
-                    isGuest: true,
-                    status: 'active',
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                if (db) {
+                    await db.collection('users').doc(guestId).set({
+                        name: guest.name,
+                        role: guest.role,
+                        isGuest: true,
+                        status: guest.status,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
                 const users = JSON.parse(localStorage.getItem('app_users') || '[]');
                 users.push(guest);
                 localStorage.setItem('app_users', JSON.stringify(users));
@@ -389,7 +344,8 @@
             } catch (error) {
                 console.error('تعذر إنشاء جلسة الضيف:', error);
                 const errorDiv = document.getElementById('loginError');
-                setFormError(errorDiv, 'تعذر الدخول كضيف الآن. حاول مرة أخرى.');
+                errorDiv.textContent = 'تعذر الدخول كضيف الآن. حاول مرة أخرى.';
+                errorDiv.classList.remove('hidden');
                 this.disabled = false;
                 this.textContent = 'الدخول كضيف';
             }

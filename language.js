@@ -26,64 +26,6 @@
         'إدارة': 'Admin',
         'الإدارة': 'Admin',
         'ChatGPT': 'ChatGPT',
-        'الرسائل': 'Messages',
-        'رسائل المستخدم للقراءة فقط': 'Read-only user messages',
-        'يعرض هذا القسم الرسائل النصية التي أرسلها المستخدم المحدد، ولا يتيح الدخول إلى حسابه أو إرسال رسائل باسمه. كل عملية عرض تُسجّل في سجل التدقيق.': 'This section shows text messages sent by the selected user. It does not sign in as the user or send messages on their behalf. Each view is recorded in an audit log.',
-        'اختر «عرض الرسائل» من جدول الحسابات.': 'Choose “View messages” in the accounts table.',
-        'عرض الرسائل': 'View messages',
-        'إعادة ضبط كلمة المرور': 'Reset password',
-        'اسم المستخدم': 'Username',
-        'كلمة المرور (8 أحرف على الأقل)': 'Password (at least 8 characters)',
-        'رسائل المرسلة النشطة من': 'Active messages sent by',
-        'لا توجد رسائل مرسلة نشطة لهذا الحساب.': 'This account has no active sent messages.',
-        'جارٍ تحميل الرسائل المرسلة...': 'Loading sent messages...',
-        'تعذر عرض الرسائل. تحقق من صلاحية الأدمن الموثوقة واتصال Firebase.': 'Could not view messages. Check the trusted admin permission and Firebase connection.',
-        'إلى:': 'To:',
-        'وقت الإرسال غير متاح': 'Sent time unavailable',
-        'لا يمكن عرض رسائل حساب الضيف.': 'Guest messages cannot be viewed.',
-        'إعادة الضبط متاحة لحسابات الأعضاء فقط.': 'Password reset is available for member accounts only.',
-        'يجب أن تتكون كلمة المرور من 8 إلى 128 حرفًا.': 'Password must be 8-128 characters.',
-        'أرسل كلمة المرور الجديدة للمستخدم عبر وسيلة آمنة خارج المنصة. هل تريد المتابعة؟': 'Send the new password to the user through a trusted channel outside the platform. Continue?',
-        'تم تحديث كلمة المرور وتفعيل الحساب في Firebase. أرسلها للمستخدم عبر قناة آمنة.': 'Password updated and account activated in Firebase. Send it to the user through a trusted channel.',
-        'تعذر إعادة ضبط كلمة المرور. تحقق من صلاحية الأدمن واتصال Firebase.': 'Could not reset the password. Check the admin permission and Firebase connection.',
-        'تعذر التحقق من صلاحية الأدمن الموثوقة. سجّل الدخول بحساب أدمن مهيأ في Firebase.': 'Could not verify trusted admin access. Sign in with an admin account configured in Firebase.',
-        'تعذر إنشاء حساب الأدمن. تحقق من صلاحياتك واتصالك.': 'Could not create the admin account. Check your permissions and connection.',
-        'هذا حساب قديم. تواصل مع الأدمن لإعادة ضبط كلمة المرور قبل التسجيل.': 'This is a legacy account. Contact the admin to reset its password before signing in.',
-        'اسم المستخدم مسجل بالفعل. تواصل مع الأدمن إذا كان حسابك قديمًا.': 'That username is already registered. Contact the admin if this is your legacy account.',
-        'خدمة الحسابات غير مهيأة بعد.': 'The account service has not been configured yet.',
-        'تعذر إنشاء الحساب الآن. تحقق من الاتصال وحاول مجددًا.': 'Could not create the account. Check your connection and try again.',
-        'العودة للرئيسية': 'Back to Home',
-        'المحادثات': 'Conversations',
-        'نص فقط': 'Text only',
-        'محادثات نصية فقط. تختفي الرسائل بعد 24 ساعة، وقد يستغرق حذفها النهائي من Firebase وقتًا إضافيًا.': 'Text-only chats. Messages disappear after 24 hours; permanent deletion from Firebase may take additional time.',
-        'رسائل نصية فقط · تختفي بعد 24 ساعة': 'Text messages only · disappear after 24 hours',
-        'رسائل نصية فقط · حد أقصى 1000 حرف · تنتهي بعد 24 ساعة': 'Text only · 1,000-character limit · expires after 24 hours',
-        'اختر محادثة أولًا...': 'Choose a conversation first...',
-        'اكتب رسالة نصية': 'Write a text message',
-        'اكتب رسالتك هنا...': 'Type your message here...',
-        'إرسال': 'Send',
-        'ابدأ محادثة جديدة': 'Start a new conversation',
-        'اختر حسابًا من القائمة لإرسال رسالة نصية.': 'Choose an account from the list to send a text message.',
-        'اختر حسابًا لبدء محادثة نصية. لا يمكن إرسال صور أو ملفات أو إجراء مكالمات.': 'Choose an account to start a text chat. Images, files, and calls are not available.',
-        'الرسائل النصية تنتهي بعد 24 ساعة': 'Text messages expire after 24 hours',
-        'لا توجد حسابات متاحة للمراسلة.': 'No accounts are available to message.',
-        'لا توجد رسائل نشطة بعد.': 'No active messages yet.',
-        'أرسل رسالة نصية؛ وستختفي بعد 24 ساعة.': 'Send a text message; it will disappear after 24 hours.',
-        'الدردشة متاحة للحسابات المسجلة فقط. سجّل الدخول للمراسلة.': 'Chat is available to registered accounts only. Sign in to message.',
-        'تعذر العثور على هذا الحساب.': 'Could not find this account.',
-        'هذا الحساب محظور من إرسال الرسائل.': 'This account is blocked from sending messages.',
-        'اكتب رسالة نصية قبل الإرسال.': 'Write a text message before sending.',
-        'الرسالة أطول من الحد المسموح (1000 حرف).': 'The message exceeds the 1,000-character limit.',
-        'جارٍ تجهيز المحادثات...': 'Preparing chats...',
-        'جارٍ تحميل الحسابات والمحادثات...': 'Loading accounts and conversations...',
-        'جارٍ إرسال الرسالة...': 'Sending message...',
-        'تم إرسال الرسالة. ستختفي بعد 24 ساعة.': 'Message sent. It will disappear after 24 hours.',
-        'تعذر الاتصال بخدمة الرسائل. تحقق من إعداد Firebase Authentication وFirestore.': 'Could not connect to messaging. Check Firebase Authentication and Firestore configuration.',
-        'تعذر فتح المحادثة. تحقق من اتصالك وصلاحيات Firebase.': 'Could not open this conversation. Check your connection and Firebase permissions.',
-        'تعذر تحميل الرسائل. تحقق من اتصالك وصلاحيات Firebase.': 'Could not load messages. Check your connection and Firebase permissions.',
-        'تعذر إرسال الرسالة. تحقق من اتصالك وصلاحيات Firebase ثم حاول مجددًا.': 'Could not send the message. Check your connection and Firebase permissions, then try again.',
-        'مراسلة هذا الحساب': 'Message this account',
-        'الرسائل - منصة ملخصاتي': 'Messages - Molakhasati',
         'تغيير لون الخلفية': 'Toggle dark mode',
         'الوضع الداكن': 'Dark mode',
         'الوضع الفاتح': 'Light mode',
@@ -546,7 +488,7 @@
         document.dispatchEvent(new CustomEvent('site-language-change', { detail: { language } }));
     }
 
-    const UPDATE_ID = '3.11.0';
+    const UPDATE_ID = '2.12.0';
     let experienceRoot = null;
     let experienceTimer = null;
     let tourResizeHandler = null;
@@ -625,19 +567,19 @@
     function experienceCopy() {
         if (language === 'en') {
             return {
-                skip: 'Close update',
+                skip: 'Skip tour',
                 introEyebrow: `A fresh update · ${UPDATE_ID}`,
-                introTitle: 'Meet your new messages',
-                introText: 'You can now have text conversations with other members on Molakhasati.',
-                introHint: 'Here’s what’s new in version 3.11.0',
+                introTitle: 'A better way to learn starts here',
+                introText: 'Molakhasati now speaks your language. Take a quick look around.',
+                introHint: 'A short, interactive tour is coming up',
                 whatsTitle: '✨ See what’s new',
-                whatsText: 'A simple, text-only way to keep in touch.',
+                whatsText: 'A more comfortable experience, in the language you choose.',
                 items: [
-                    ['💬', 'Text chat is here', 'Start a conversation with another registered member. Messages are text only—no images, files, or calls.'],
-                    ['⏳', 'Messages disappear after 24 hours', 'Messages disappear from the chat after 24 hours. Final deletion from Firebase may take longer.'],
-                    ['🌍', 'Use Molakhasati in your language', 'Switch the interface between Arabic and English from any page.']
+                    ['🌍', 'The interface, in English', 'Switch the interface between Arabic and English from any page. Shared posts stay in their original language.'],
+                    ['💾', 'Your choice stays with you', 'Your selected language is remembered as you move around the site.'],
+                    ['↔️', 'Switch whenever you need', 'Use the small button below or the language option in the sidebar.']
                 ],
-                start: 'Continue to Molakhasati',
+                start: 'Try the new feature',
                 tourTitle: 'Your site, your language',
                 tourText: 'Tap the language button to switch languages and try the new experience.',
                 step: 'Your only step',
@@ -647,19 +589,19 @@
             };
         }
         return {
-            skip: 'إغلاق التحديث',
+            skip: 'تخطي الجولة',
             introEyebrow: `تحديث جديد · ${UPDATE_ID}`,
-            introTitle: 'تعرّف على الرسائل الجديدة',
-            introText: 'أصبح بإمكانك الآن إجراء محادثات نصية مع الأعضاء في ملخصاتي.',
-            introHint: 'إليك الجديد في التحديث 3.11.0',
+            introTitle: 'تجربة تعلّم أقرب إليك',
+            introText: 'ملخصاتي أصبحت تتحدث لغتك. خذ جولة سريعة لاكتشافها.',
+            introHint: 'جولة تفاعلية قصيرة على وشك البدء',
             whatsTitle: '✨ شوف إيش الجديد',
-            whatsText: 'طريقة بسيطة للتواصل، بالنص فقط.',
+            whatsText: 'تجربة أريح، باللغة التي تختارها.',
             items: [
-                ['💬', 'الدردشة النصية أصبحت متاحة', 'ابدأ محادثة مع عضو مسجل. المحادثات نصية فقط، ولا تدعم الصور أو الملفات أو المكالمات.'],
-                ['⏳', 'تختفي الرسائل بعد 24 ساعة', 'تختفي الرسائل من المحادثة بعد 24 ساعة، وقد يستغرق حذفها النهائي من Firebase وقتًا إضافيًا.'],
-                ['🌍', 'استخدم ملخصاتي بلغتك', 'يمكنك التبديل بين واجهتي الموقع العربية والإنجليزية من أي صفحة.']
+                ['🌍', 'واجهة الموقع بالإنجليزية', 'حوّل واجهة الموقع بين العربية والإنجليزية من أي صفحة. تبقى المنشورات بلغتها الأصلية.'],
+                ['💾', 'اختيارك يبقى محفوظًا', 'ستبقى اللغة التي تختارها معك أثناء تنقلك في الموقع.'],
+                ['↔️', 'بدّل وقت ما تحب', 'استخدم الزر الصغير أسفل الصفحة أو خيار اللغة في القائمة الجانبية.']
             ],
-            start: 'متابعة إلى ملخصاتي',
+            start: 'جرّب الميزة الجديدة',
             tourTitle: 'الموقع بلغتك',
             tourText: 'اضغط زر اللغة لتبديل الموقع وتجربة الميزة الجديدة بنفسك.',
             step: 'خطوة واحدة',
@@ -759,7 +701,7 @@
                 <div class="update-feature-list">${items}</div>
                 <button type="button" class="update-primary-action">${copy.start}<span aria-hidden="true"> →</span></button>
             </section>`, 'update-stage-whats');
-        experienceRoot.querySelector('.update-primary-action').addEventListener('click', closeExperience);
+        experienceRoot.querySelector('.update-primary-action').addEventListener('click', startFeatureTour);
     }
 
     function renderSpotlight() {

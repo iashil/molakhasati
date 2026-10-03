@@ -8,9 +8,7 @@
     <!-- 1. استدعاء مكتبة Tailwind أولاً -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
     <!-- 2. إعداد الوضع الداكن بعد استدعاء المكتبة -->
     <script src="presence.js"></script>
     <script>
@@ -127,7 +125,6 @@
                         <span class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-lg text-gray-700 dark:bg-neutral-800 dark:text-gray-200">✨</span>
                         <span>ChatGPT</span>
                     </a>
-                    <a href="chat.html" data-sidebar-item="messages" class="sidebar-item-enter flex items-center gap-3 rounded-xl px-3 py-3 font-medium text-sm text-gray-700 dark:text-gray-200 transition hover:bg-gray-100 dark:hover:bg-neutral-800"><span class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-lg text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">✉</span><span>الرسائل</span></a>
                     <a href="saved.html" data-sidebar-item="saved" class="sidebar-item-enter flex items-center gap-3 rounded-xl px-3 py-3 font-medium text-sm text-gray-700 dark:text-gray-200 transition hover:bg-gray-100 dark:hover:bg-neutral-800">
                         <span class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-lg text-gray-700 dark:bg-neutral-800 dark:text-gray-200">🔖</span>
                         <span>المحفوظات</span>
@@ -159,9 +156,10 @@
         <!-- 1. إضافة مسؤول جديد -->
         <section class="admin-card bg-white dark:bg-neutral-800 p-6 rounded-lg border border-gray-200 dark:border-neutral-700 shadow-sm space-y-4 transition-colors">
             <h2 class="font-bold text-sm text-gray-800 dark:text-gray-100 border-b border-gray-200 dark:border-neutral-700 pb-2">إضافة مسؤول (Admin) جديد</h2>
-            <form id="addAdminForm" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <input type="text" id="adminName" placeholder="اسم المستخدم" minlength="2" maxlength="40" required class="bg-gray-50 dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600 p-2 text-xs rounded outline-none focus:border-gray-900 dark:focus:border-gray-400">
-                <input type="password" id="adminPassword" placeholder="كلمة المرور (8 أحرف على الأقل)" minlength="8" maxlength="128" required class="bg-gray-50 dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600 p-2 text-xs rounded outline-none focus:border-gray-900 dark:focus:border-gray-400" dir="ltr">
+            <form id="addAdminForm" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <input type="text" id="adminName" placeholder="الاسم الكامل" required class="bg-gray-50 dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600 p-2 text-xs rounded outline-none focus:border-gray-900 dark:focus:border-gray-400">
+                <input type="email" id="adminEmail" placeholder="البريد الإلكتروني" required class="bg-gray-50 dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600 p-2 text-xs rounded outline-none focus:border-gray-900 dark:focus:border-gray-400" dir="ltr">
+                <input type="password" id="adminPassword" placeholder="كلمة المرور" required class="bg-gray-50 dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600 p-2 text-xs rounded outline-none focus:border-gray-900 dark:focus:border-gray-400" dir="ltr">
                 <button type="submit" class="bg-gray-900 dark:bg-gray-700 text-white text-xs font-bold rounded py-2 hover:bg-black dark:hover:bg-gray-600 transition-colors">إضافة المسؤول</button>
             </form>
         </section>
@@ -193,13 +191,6 @@
                     <tbody id="usersTableBody" class="divide-y dark:divide-neutral-700"></tbody>
                 </table>
             </div>
-        </section>
-
-        <section class="admin-card bg-white dark:bg-neutral-800 p-6 rounded-lg border border-gray-200 dark:border-neutral-700 shadow-sm space-y-4 transition-colors">
-            <h2 class="font-bold text-sm text-gray-800 dark:text-gray-100 border-b border-gray-200 dark:border-neutral-700 pb-2">رسائل المستخدم للقراءة فقط</h2>
-            <p class="text-xs leading-6 text-gray-600 dark:text-gray-300">يعرض هذا القسم الرسائل النصية التي أرسلها المستخدم المحدد، ولا يتيح الدخول إلى حسابه أو إرسال رسائل باسمه. كل عملية عرض تُسجّل في سجل التدقيق.</p>
-            <p id="adminMessagesStatus" role="status" class="text-xs text-gray-500 dark:text-gray-400">اختر «عرض الرسائل» من جدول الحسابات.</p>
-            <div id="adminMessagesFeed" class="max-h-[32rem] space-y-3 overflow-y-auto"></div>
         </section>
 
         <!-- 3. إدارة المنشورات والتعليقات -->
@@ -238,15 +229,10 @@
         };
         const firebaseConfigured = Object.values(FIREBASE_CONFIG).every(value => !value.includes('ضع_'));
         let db = null;
-        let auth = null;
-        let functions = null;
         if (firebaseConfigured) {
             firebase.initializeApp(FIREBASE_CONFIG);
             db = firebase.firestore();
-            auth = firebase.auth();
-            functions = firebase.app().functions('us-central1');
         }
-        document.getElementById('contentLayout').classList.add('invisible', 'pointer-events-none');
 
         // دالة تغيير اللون معدلة لتكون أكثر توافقية
         function applyTheme(isDark) {
@@ -262,49 +248,21 @@
             applyTheme(!document.documentElement.classList.contains('dark'));
         });
 
-        async function enforceAdminSecurity() {
+        // التحقق الأمني القاطع من الصلاحيات قبل فتح أي عنصر
+        (function enforceAdminSecurity() {
             const userStr = localStorage.getItem('current_user');
-            if (!userStr || !auth || !functions) {
+            if (!userStr) {
                 window.location.href = 'login.html';
-                return false;
+                return;
             }
-            try {
-                const localUser = JSON.parse(userStr);
-                const authUser = await new Promise((resolve, reject) => {
-                    const unsubscribe = auth.onAuthStateChanged(user => {
-                        unsubscribe();
-                        resolve(user);
-                    }, error => {
-                        unsubscribe();
-                        reject(error);
-                    });
-                });
-                if (!authUser) throw new Error('admin/no-auth-user');
-                const token = await authUser.getIdTokenResult();
-                if (token.claims.admin !== true) throw new Error('admin/claim-required');
-                const result = await functions.httpsCallable('validateAccountSession')();
-                await authUser.getIdToken(true);
-                currentUser = {
-                    ...localUser,
-                    id: result.data.uid,
-                    name: result.data.username,
-                    role: 'admin',
-                    status: result.data.status
-                };
-                localStorage.setItem('current_user', JSON.stringify(currentUser));
-                startPresenceTracking(db, currentUser);
-                document.getElementById('contentLayout').classList.remove('invisible', 'pointer-events-none');
-                return true;
-            } catch (error) {
-                console.error('تعذر التحقق من صلاحية Firebase Admin:', error);
-                alert('تعذر التحقق من صلاحية الأدمن الموثوقة. سجّل الدخول بحساب أدمن مهيأ في Firebase.');
-                localStorage.removeItem('current_user');
-                window.location.href = 'login.html';
-                return false;
+            currentUser = JSON.parse(userStr);
+            if (currentUser.role !== 'admin') {
+                alert('عذراً، لا تملك صلاحيات الوصول لهذه الصفحة.');
+                window.location.href = 'index.html';
+                return;
             }
-        }
-
-        enforceAdminSecurity();
+            startPresenceTracking(db, currentUser);
+        })();
 
         let sidebarIsOpen = window.innerWidth >= 1024;
 
@@ -380,31 +338,36 @@
 
         function logout() {
             localStorage.removeItem('current_user');
-            auth.signOut().then(() => { window.location.href = 'login.html'; })
-                .catch(error => {
-                    console.error('تعذر إنهاء جلسة الأدمن:', error);
-                    alert('تعذر إنهاء الجلسة الآن. حاول مجددًا.');
-                });
+            window.location.href = 'login.html';
         }
 
+        // إضافة مسؤول جديد
         document.getElementById('addAdminForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            const users = JSON.parse(localStorage.getItem('app_users') || '[]');
             const name = document.getElementById('adminName').value.trim();
+            const email = document.getElementById('adminEmail').value.trim().toLowerCase();
             const password = document.getElementById('adminPassword').value;
-            const button = this.querySelector('button[type="submit"]');
-            button.disabled = true;
-            try {
-                await functions.httpsCallable('createAdminAccount')({username: name, password});
-                alert('تم إنشاء حساب الأدمن. يمكنه تسجيل الدخول باسم المستخدم وكلمة المرور المحددين.');
-                this.reset();
-            } catch (error) {
-                console.error('تعذر إنشاء حساب الأدمن:', error);
-                alert(error.code === 'functions/already-exists'
-                    ? 'اسم المستخدم مسجل بالفعل.'
-                    : 'تعذر إنشاء حساب الأدمن. تحقق من صلاحياتك واتصالك.');
-            } finally {
-                button.disabled = false;
+
+            if (users.some(u => u.email && u.email.toLowerCase() === email)) {
+                alert('هذا البريد مسجل بالفعل.');
+                return;
             }
+
+            const newAdmin = {
+                id: 'admin_' + Date.now(),
+                name: name,
+                email: email,
+                role: 'admin',
+                status: 'active'
+            };
+
+            users.push({...newAdmin, password});
+            localStorage.setItem('app_users', JSON.stringify(users));
+            if (db) await db.collection('users').doc(newAdmin.id).set(newAdmin);
+            alert('تم إضاقة المسؤول بنجاح.');
+            this.reset();
+            renderAdminData();
         });
 
         function getBannedWords() {
@@ -527,7 +490,7 @@
             }
             users = users.filter(u => u.id !== userId);
             localStorage.setItem('app_users', JSON.stringify(users));
-            if (db) await functions.httpsCallable('deleteAccount')({uid: String(userId)});
+            if (db) await db.collection('users').doc(userId).delete();
             renderAdminData();
         }
 
@@ -624,69 +587,7 @@
             if (!button) return;
             if (button.dataset.adminAction === 'toggle-user-status') toggleUserStatus(button.dataset.userId);
             if (button.dataset.adminAction === 'delete-user') deleteUser(button.dataset.userId);
-            if (button.dataset.adminAction === 'view-user-messages') loadUserSentMessages(button.dataset.userId);
-            if (button.dataset.adminAction === 'reset-user-password') resetUserPassword(button.dataset.userId);
         });
-
-        async function loadUserSentMessages(userId) {
-            const target = (cachedAdminUsers || []).find(user => String(user.id) === String(userId));
-            if (!target || target.role === 'guest' || target.isGuest === true) {
-                alert('لا يمكن عرض رسائل حساب الضيف.');
-                return;
-            }
-            if (!confirm(`سيتم عرض الرسائل النصية المرسلة من حساب "${target.name || 'المستخدم'}". سيتم تسجيل هذه العملية. هل تريد المتابعة؟`)) return;
-            const feed = document.getElementById('adminMessagesFeed');
-            const status = document.getElementById('adminMessagesStatus');
-            status.textContent = 'جارٍ تحميل الرسائل المرسلة...';
-            feed.replaceChildren();
-            try {
-                const result = await functions.httpsCallable('getUserSentMessages')({uid: String(userId)});
-                const messages = result.data.messages || [];
-                status.textContent = `الرسائل المرسلة النشطة من ${result.data.username || target.name}: ${messages.length} (بحد أقصى 100 رسالة).`;
-                if (!messages.length) {
-                    feed.innerHTML = '<p class="rounded-lg bg-gray-50 p-4 text-xs text-gray-500 dark:bg-neutral-700 dark:text-gray-300">لا توجد رسائل مرسلة نشطة لهذا الحساب.</p>';
-                    return;
-                }
-                feed.innerHTML = messages.map(message => {
-                    const recipient = (cachedAdminUsers || []).find(user => String(user.id) === String(message.recipientId));
-                    const sentAt = message.createdAt
-                        ? new Date(message.createdAt).toLocaleString(window.getSiteLocale())
-                        : 'وقت الإرسال غير متاح';
-                    return `<article class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-neutral-700 dark:bg-neutral-900">
-                        <div class="mb-2 flex flex-wrap items-center justify-between gap-2 text-[10px] text-gray-500 dark:text-gray-400">
-                            <span>إلى: ${escapeAdminHtml(recipient ? recipient.name : message.recipientId)}</span>
-                            <time>${escapeAdminHtml(sentAt)}</time>
-                        </div>
-                        <p class="whitespace-pre-wrap break-words text-sm leading-6">${escapeAdminHtml(message.text)}</p>
-                    </article>`;
-                }).join('');
-            } catch (error) {
-                console.error('تعذر تحميل رسائل المستخدم للأدمن:', error);
-                status.textContent = 'تعذر عرض الرسائل. تحقق من صلاحية الأدمن الموثوقة واتصال Firebase.';
-            }
-        }
-
-        async function resetUserPassword(userId) {
-            const target = (cachedAdminUsers || []).find(user => String(user.id) === String(userId));
-            if (!target || target.role === 'admin' || target.role === 'guest' || target.isGuest === true) {
-                alert('إعادة الضبط متاحة لحسابات الأعضاء فقط.');
-                return;
-            }
-            const password = prompt(`أدخل كلمة مرور مؤقتة جديدة لحساب "${target.name || 'المستخدم'}" (8 أحرف على الأقل).`);
-            if (password === null) return;
-            if (password.length < 8 || password.length > 128) {
-                alert('يجب أن تتكون كلمة المرور من 8 إلى 128 حرفًا.');
-                return;
-            }
-            if (!confirm('أرسل كلمة المرور الجديدة للمستخدم عبر وسيلة آمنة خارج المنصة. هل تريد المتابعة؟')) return;
-            try {
-                await functions.httpsCallable('resetAccountPassword')({uid: String(userId), password});
-                alert('تم تحديث كلمة المرور وتفعيل الحساب في Firebase. أرسلها للمستخدم عبر قناة آمنة.');
-            } catch (error) {
-                console.error('تعذر إعادة ضبط كلمة مرور الحساب:', error);
-                alert('تعذر إعادة ضبط كلمة المرور. تحقق من صلاحية الأدمن واتصال Firebase.');
-            }
-        }
 
         async function deleteAdminQuestion(questionId) {
             if (!confirm('هل تريد حذف السؤال وجميع إجاباته؟')) return;
@@ -770,7 +671,6 @@
                     <td class="p-2 text-gray-500 dark:text-gray-400" dir="ltr">${formatAdminTime(u.lastSeenAt || u.lastLoginAt)}</td>
                     <td class="p-2 space-x-2 space-x-reverse">
                         <button type="button" data-admin-action="toggle-user-status" data-user-id="${escapeAdminHtml(u.id)}" class="text-amber-600 dark:text-amber-500 hover:underline">${u.status === 'banned' ? 'إلغاء الحظر' : 'حظر'}</button>
-                        ${!isGuest && u.role !== 'admin' ? `<button type="button" data-admin-action="view-user-messages" data-user-id="${escapeAdminHtml(u.id)}" class="text-blue-700 dark:text-blue-400 hover:underline">عرض الرسائل</button><button type="button" data-admin-action="reset-user-password" data-user-id="${escapeAdminHtml(u.id)}" class="text-violet-700 dark:text-violet-400 hover:underline">إعادة ضبط كلمة المرور</button>` : ''}
                         <button type="button" data-admin-action="delete-user" data-user-id="${escapeAdminHtml(u.id)}" class="text-red-600 dark:text-red-500 hover:underline">حذف</button>
                     </td>
                 `;

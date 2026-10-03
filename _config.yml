@@ -1,5 +1,0 @@
-exclude:
-  - functions
-  - firebase.json
-  - firestore.indexes.json
-  - firestore.rules
