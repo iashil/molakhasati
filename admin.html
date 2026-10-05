@@ -70,6 +70,9 @@
             will-change: opacity;
         }
         .sidebar-overlay.visible { opacity: 1; visibility: visible; pointer-events: auto; }
+        body.admin-auth-pending > header,
+        body.admin-auth-pending #contentLayout,
+        body.admin-auth-pending > footer { visibility: hidden; }
         .sidebar-animated {
             transition: transform 280ms var(--motion-ease), opacity 260ms var(--motion-ease);
             will-change: transform, opacity;
@@ -92,7 +95,7 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-900 dark:bg-neutral-900 dark:text-gray-100 min-h-screen transition-colors duration-300">
+<body class="admin-auth-pending bg-gray-100 text-gray-900 dark:bg-neutral-900 dark:text-gray-100 min-h-screen transition-colors duration-300">
 
     <header class="bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 sticky top-0 z-50">
         <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
@@ -251,21 +254,46 @@
             applyTheme(!document.documentElement.classList.contains('dark'));
         });
 
-        // التحقق الأمني القاطع من الصلاحيات قبل فتح أي عنصر
-        (function enforceAdminSecurity() {
-            const userStr = localStorage.getItem('current_user');
-            if (!userStr) {
-                window.location.href = 'login.html';
+        const ADMIN_EMAIL = 'ashil@admin.com';
+        const adminAccessReady = new Promise(resolve => {
+            const denyAccess = () => {
+                document.body.classList.add('admin-auth-pending');
+                localStorage.removeItem('current_user');
+                window.location.replace('login.html');
+                resolve(false);
+            };
+
+            if (!auth) {
+                denyAccess();
                 return;
             }
-            currentUser = JSON.parse(userStr);
-            if (currentUser.role !== 'admin') {
-                alert('عذراً، لا تملك صلاحيات الوصول لهذه الصفحة.');
-                window.location.href = 'index.html';
-                return;
-            }
-            startPresenceTracking(db, currentUser);
-        })();
+
+            auth.onAuthStateChanged(firebaseUser => {
+                let storedUser = null;
+                try {
+                    storedUser = JSON.parse(localStorage.getItem('current_user') || 'null');
+                } catch (_) {}
+
+                if (!firebaseUser || String(firebaseUser.email || '').toLowerCase() !== ADMIN_EMAIL || storedUser?.id !== firebaseUser.uid) {
+                    denyAccess();
+                    return;
+                }
+
+                currentUser = {
+                    id: firebaseUser.uid,
+                    name: 'ashil admin',
+                    email: firebaseUser.email,
+                    role: 'admin',
+                    status: 'active'
+                };
+                document.body.classList.remove('admin-auth-pending');
+                startPresenceTracking(db, currentUser);
+                resolve(true);
+            }, error => {
+                console.error('تعذر التحقق من جلسة الإدارة:', error);
+                denyAccess();
+            });
+        });
 
         let sidebarIsOpen = window.innerWidth >= 1024;
 
@@ -345,33 +373,11 @@
             window.location.href = 'login.html';
         }
 
-        // إضافة مسؤول جديد
-        document.getElementById('addAdminForm').addEventListener('submit', async function(e) {
+        // لا يمكن منح صلاحية مدير بأمان من واجهة تعمل في المتصفح فقط.
+        document.getElementById('addAdminForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            const users = JSON.parse(localStorage.getItem('app_users') || '[]');
-            const name = document.getElementById('adminName').value.trim();
-            const email = document.getElementById('adminEmail').value.trim().toLowerCase();
-            const password = document.getElementById('adminPassword').value;
-
-            if (users.some(u => u.email && u.email.toLowerCase() === email)) {
-                alert('هذا البريد مسجل بالفعل.');
-                return;
-            }
-
-            const newAdmin = {
-                id: 'admin_' + Date.now(),
-                name: name,
-                email: email,
-                role: 'admin',
-                status: 'active'
-            };
-
-            users.push({...newAdmin, password});
-            localStorage.setItem('app_users', JSON.stringify(users));
-            if (db) await db.collection('users').doc(newAdmin.id).set(newAdmin);
-            alert('تم إضاقة المسؤول بنجاح.');
             this.reset();
-            renderAdminData();
+            alert('إنشاء مدير من المتصفح غير آمن. أنشئ حساب Firebase وامنح صلاحية الإدارة من بيئة موثوقة.');
         });
 
         function getBannedWords() {
@@ -795,41 +801,44 @@
             return escapeAdminHtml(time);
         }
 
-        if (db) {
-            db.collection('users').onSnapshot(snapshot => {
-                const users = [];
-                snapshot.forEach(doc => users.push({id: doc.id, ...doc.data()}));
-                renderAdminData(users, cachedAdminPosts);
-                renderSupportMessages(getSupportMessages());
-            });
-            db.collection('posts').onSnapshot(snapshot => {
-                const posts = [];
-                snapshot.forEach(doc => posts.push({id: doc.id, ...doc.data()}));
-                renderAdminData(cachedAdminUsers, posts, cachedAdminQuestions);
-            });
-            db.collection('questions').orderBy('createdAt', 'desc').limit(100).onSnapshot(snapshot => {
-                const questions = [];
-                snapshot.forEach(doc => questions.push({id: doc.id, ...doc.data()}));
-                renderAdminData(cachedAdminUsers, cachedAdminPosts, questions);
-            }, error => {
-                console.error('تعذر تحميل الأسئلة في لوحة الإدارة:', error);
-                const status = document.getElementById('adminQuestionsStatus');
-                status.textContent = 'تعذر تحميل الأسئلة. تحقق من الاتصال وصلاحيات قاعدة البيانات.';
-            });
-            db.collection('support_messages').orderBy('createdAt', 'desc').limit(50).onSnapshot(snapshot => {
-                const supportMessages = [];
-                snapshot.forEach(doc => supportMessages.push({id: doc.id, ...doc.data()}));
-                localStorage.setItem('support_messages', JSON.stringify(supportMessages));
-                renderSupportMessages(supportMessages);
-            }, error => {
-                console.error('تعذر تحميل رسائل الدعم:', error);
+        adminAccessReady.then(isAuthorized => {
+            if (!isAuthorized) return;
+            if (db) {
+                db.collection('users').onSnapshot(snapshot => {
+                    const users = [];
+                    snapshot.forEach(doc => users.push({id: doc.id, ...doc.data()}));
+                    renderAdminData(users, cachedAdminPosts);
+                    renderSupportMessages(getSupportMessages());
+                });
+                db.collection('posts').onSnapshot(snapshot => {
+                    const posts = [];
+                    snapshot.forEach(doc => posts.push({id: doc.id, ...doc.data()}));
+                    renderAdminData(cachedAdminUsers, posts, cachedAdminQuestions);
+                });
+                db.collection('questions').orderBy('createdAt', 'desc').limit(100).onSnapshot(snapshot => {
+                    const questions = [];
+                    snapshot.forEach(doc => questions.push({id: doc.id, ...doc.data()}));
+                    renderAdminData(cachedAdminUsers, cachedAdminPosts, questions);
+                }, error => {
+                    console.error('تعذر تحميل الأسئلة في لوحة الإدارة:', error);
+                    const status = document.getElementById('adminQuestionsStatus');
+                    status.textContent = 'تعذر تحميل الأسئلة. تحقق من الاتصال وصلاحيات قاعدة البيانات.';
+                });
+                db.collection('support_messages').orderBy('createdAt', 'desc').limit(50).onSnapshot(snapshot => {
+                    const supportMessages = [];
+                    snapshot.forEach(doc => supportMessages.push({id: doc.id, ...doc.data()}));
+                    localStorage.setItem('support_messages', JSON.stringify(supportMessages));
+                    renderSupportMessages(supportMessages);
+                }, error => {
+                    console.error('تعذر تحميل رسائل الدعم:', error);
+                    refreshSupportMessages();
+                });
+            } else {
+                renderAdminData();
                 refreshSupportMessages();
-            });
-        } else {
-            renderAdminData();
+            }
             refreshSupportMessages();
-        }
-        refreshSupportMessages();
+        });
     </script>
     <span aria-hidden="true" class="pointer-events-none fixed bottom-2 right-2 z-[25] select-none text-[9px] leading-none text-gray-500/50 dark:text-gray-400/45">الإصدار 2.12.0</span>
 </body>

@@ -16,15 +16,72 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <style>
+        .login-page {
+            min-height: 100vh;
+            min-height: var(--login-visible-height, 100dvh);
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            padding: max(.75rem, env(safe-area-inset-top)) max(.75rem, env(safe-area-inset-right)) max(.75rem, env(safe-area-inset-bottom)) max(.75rem, env(safe-area-inset-left));
+        }
+
+        .login-layout {
+            width: 100%;
+            max-width: 64rem;
+            flex: 1 0 auto;
+            align-items: center;
+            justify-content: center;
+            margin-inline: auto;
+        }
+
+        .login-footer {
+            position: static;
+            flex: none;
+            padding-block: .5rem 2.5rem;
+        }
+
+        #themeToggle {
+            position: absolute;
+            top: max(.75rem, env(safe-area-inset-top));
+            left: max(.75rem, env(safe-area-inset-left));
+            z-index: 10;
+        }
+
+        .login-page input { scroll-margin-block: 1rem; }
+
+        @media (max-width: 767px) {
+            .login-layout {
+                flex: 0 0 auto;
+                align-items: stretch;
+                justify-content: flex-start;
+                gap: .75rem;
+                padding-block: 3.75rem .75rem;
+            }
+
+            .login-card {
+                order: -1;
+                max-width: none;
+                margin: 0;
+                padding: 1.25rem;
+            }
+
+            .login-rules {
+                order: 1;
+                width: 100%;
+                padding: 1rem;
+            }
+        }
+    </style>
 </head>
-<body class="bg-gray-50 text-gray-900 dark:bg-neutral-900 dark:text-gray-100 min-h-screen flex items-center justify-center p-4 transition-colors duration-300">
+<body class="login-page bg-gray-50 text-gray-900 dark:bg-neutral-900 dark:text-gray-100 transition-colors duration-300">
 
     <button type="button" id="themeToggle" class="fixed top-4 left-4 border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" aria-label="تغيير لون الخلفية">🌙 الوضع الداكن</button>
 
-    <div class="w-full max-w-5xl flex flex-col lg:flex-row-reverse gap-5 items-stretch">
+    <div class="login-layout flex flex-col lg:flex-row-reverse gap-5 items-stretch">
 
         <!-- بطاقة القواعد في الجهة اليمنى -->
-        <aside class="w-full lg:w-80 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 p-6 rounded-lg shadow-sm transition-colors duration-300">
+        <aside class="login-rules w-full lg:w-80 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 p-6 rounded-lg shadow-sm transition-colors duration-300">
             <div class="flex items-center gap-3 mb-5">
                 <div class="w-10 h-10 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 flex items-center justify-center text-lg shadow-sm">
                     📜
@@ -68,7 +125,7 @@
         </aside>
 
         <!-- بطاقة تسجيل الدخول -->
-        <div class="w-full lg:flex-1 lg:max-w-md lg:mx-auto bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 p-8 rounded-lg shadow-sm space-y-6 transition-colors duration-300">
+        <div class="login-card w-full lg:flex-1 lg:max-w-md lg:mx-auto bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 p-8 rounded-lg shadow-sm space-y-6 transition-colors duration-300">
         
         <!-- التبديل بين الدخول والتسجيل -->
         <div class="flex border-b border-gray-200 dark:border-neutral-700 pb-2 gap-4 justify-center">
@@ -115,7 +172,7 @@
         </div>
     </div>
 
-    <footer class="fixed bottom-4 inset-x-0 flex justify-center">
+    <footer class="login-footer flex justify-center">
         <a href="https://www.instagram.com/iashil_/" target="_blank" rel="noopener noreferrer" class="inline-block border border-black bg-black px-4 py-2 text-xs text-white rounded-full dark:border-white dark:bg-white dark:text-black transition-colors hover:opacity-90">
             Created By: ashil
         </a>
@@ -151,6 +208,28 @@
             applyTheme(!document.documentElement.classList.contains('dark'));
         });
 
+        (function keepLoginViewportVisible() {
+            const viewport = window.visualViewport;
+            const updateHeight = () => {
+                const height = viewport ? viewport.height : window.innerHeight;
+                document.documentElement.style.setProperty('--login-visible-height', `${height}px`);
+            };
+            updateHeight();
+            viewport?.addEventListener('resize', updateHeight);
+            window.addEventListener('resize', updateHeight, {passive: true});
+
+            document.querySelectorAll('#loginForm input, #registerForm input').forEach(input => {
+                input.addEventListener('focus', () => requestAnimationFrame(() => {
+                    const top = viewport?.offsetTop || 0;
+                    const bottom = top + (viewport?.height || window.innerHeight);
+                    const rect = input.getBoundingClientRect();
+                    if (rect.top < top + 12 || rect.bottom > bottom - 12) {
+                        input.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+                    }
+                }));
+            });
+        })();
+
         function togglePass(inputId, btn) {
             const input = document.getElementById(inputId);
             if (input.type === 'password') {
@@ -178,7 +257,7 @@
 
         (function initDB() {
             let users = JSON.parse(localStorage.getItem('app_users') || '[]');
-            users = users.filter(u => u.name.toLowerCase() !== 'admin');
+            users = users.filter(user => user && user.role !== 'admin' && typeof user.name === 'string' && user.name.toLowerCase() !== 'admin');
 
             const uniqueUsers = [];
             users.forEach(user => {
@@ -190,16 +269,6 @@
                 }
             });
             users = uniqueUsers;
-            
-            const adminAccounts = [
-                { id: 'admin_1', name: 'ashil admin', password: 'ashil68372', role: 'admin', status: 'active' },
-                { id: 'admin_2', name: 'feras admin', password: 'feras2009', role: 'admin', status: 'active' }
-            ];
-            adminAccounts.forEach(admin => {
-                const existing = users.find(user => normalizeText(user.name) === normalizeText(admin.name));
-                if (existing) Object.assign(existing, admin);
-                else users.push(admin);
-            });
             
             localStorage.setItem('app_users', JSON.stringify(users));
         })();
@@ -287,7 +356,13 @@
             const users = JSON.parse(localStorage.getItem('app_users') || '[]');
             const normalizedName = normalizeText(rawName);
 
-            if (normalizedName === 'ashil admin' && auth) {
+            if (normalizedName === 'ashil admin') {
+                if (!auth) {
+                    errorDiv.textContent = 'تعذر الاتصال بخدمة تسجيل دخول الإدارة في Firebase.';
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+
                 try {
                     const credential = await auth.signInWithEmailAndPassword('ashil@admin.com', password);
                     const admin = {
@@ -302,7 +377,10 @@
                     window.location.href = 'admin.html';
                     return;
                 } catch (error) {
-                    console.warn('تعذر تسجيل دخول المدير عبر Firebase؛ ستتم تجربة الحساب المحلي.', error);
+                    console.error('تعذر تسجيل دخول المدير عبر Firebase:', error);
+                    errorDiv.textContent = 'تعذر دخول الإدارة. تحقق من تفعيل البريد وكلمة المرور في Firebase ومن صحة كلمة المرور.';
+                    errorDiv.classList.remove('hidden');
+                    return;
                 }
             }
 
@@ -316,6 +394,12 @@
 
             if (user.status === 'banned') {
                 errorDiv.textContent = 'تم حظر هذا الحساب من استخدام المنصة.';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            if (user.role === 'admin') {
+                errorDiv.textContent = 'يجب تسجيل دخول الإدارة عبر حساب Firebase المعتمد.';
                 errorDiv.classList.remove('hidden');
                 return;
             }
