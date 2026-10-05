@@ -8,6 +8,7 @@
     <!-- 1. استدعاء مكتبة Tailwind أولاً -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <!-- 2. إعداد الوضع الداكن بعد استدعاء المكتبة -->
     <script src="presence.js"></script>
@@ -229,9 +230,11 @@
         };
         const firebaseConfigured = Object.values(FIREBASE_CONFIG).every(value => !value.includes('ضع_'));
         let db = null;
+        let auth = null;
         if (firebaseConfigured) {
             firebase.initializeApp(FIREBASE_CONFIG);
             db = firebase.firestore();
+            auth = firebase.auth();
         }
 
         // دالة تغيير اللون معدلة لتكون أكثر توافقية
@@ -336,7 +339,8 @@
             }
         }
 
-        function logout() {
+        async function logout() {
+            if (auth) await auth.signOut().catch(error => console.error('تعذر تسجيل الخروج من Firebase:', error));
             localStorage.removeItem('current_user');
             window.location.href = 'login.html';
         }

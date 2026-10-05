@@ -14,6 +14,7 @@
         }
     </script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-900 dark:bg-neutral-900 dark:text-gray-100 min-h-screen flex items-center justify-center p-4 transition-colors duration-300">
@@ -130,9 +131,11 @@
         };
         const firebaseConfigured = Object.values(FIREBASE_CONFIG).every(value => !value.includes('ضع_'));
         let db = null;
+        let auth = null;
         if (firebaseConfigured) {
             firebase.initializeApp(FIREBASE_CONFIG);
             db = firebase.firestore();
+            auth = firebase.auth();
         }
 
         const allowedNames = ["اصيل", "صلاح", "محمد", "رشاد", "ابوبكر", "حسين", "احمد", "معتز", "منير", "سالم", "مهاب", "فراس", "شهاب", "عمار", "عبد الحكيم", "هيثم ابراهيم", "صالح", "سيف", "باوزير", "جراح", "جمال"];
@@ -188,16 +191,15 @@
             });
             users = uniqueUsers;
             
-            // التأكد من عدم تكرار الحسابات عند كل تحديث للصفحة
-            const admin1Exists = users.some(u => u.name === 'ashil admin');
-            const admin2Exists = users.some(u => u.name === 'feras admin');
-
-            if (!admin1Exists) {
-                users.push({ id: 'admin_1', name: 'ashil admin', password: 'ashil68372', role: 'admin', status: 'active' });
-            }
-            if (!admin2Exists) {
-                users.push({ id: 'admin_2', name: 'feras admin', password: 'feras2009', role: 'admin', status: 'active' });
-            }
+            const adminAccounts = [
+                { id: 'admin_1', name: 'ashil admin', password: 'ashil68372', role: 'admin', status: 'active' },
+                { id: 'admin_2', name: 'feras admin', password: 'feras2009', role: 'admin', status: 'active' }
+            ];
+            adminAccounts.forEach(admin => {
+                const existing = users.find(user => normalizeText(user.name) === normalizeText(admin.name));
+                if (existing) Object.assign(existing, admin);
+                else users.push(admin);
+            });
             
             localStorage.setItem('app_users', JSON.stringify(users));
         })();
@@ -284,6 +286,25 @@
 
             const users = JSON.parse(localStorage.getItem('app_users') || '[]');
             const normalizedName = normalizeText(rawName);
+
+            if (normalizedName === 'ashil admin' && auth) {
+                try {
+                    const credential = await auth.signInWithEmailAndPassword('ashil@admin.com', password);
+                    const admin = {
+                        id: credential.user.uid,
+                        name: 'ashil admin',
+                        email: credential.user.email,
+                        role: 'admin',
+                        status: 'active',
+                        lastLoginAt: new Date().toISOString()
+                    };
+                    localStorage.setItem('current_user', JSON.stringify(admin));
+                    window.location.href = 'admin.html';
+                    return;
+                } catch (error) {
+                    console.warn('تعذر تسجيل دخول المدير عبر Firebase؛ ستتم تجربة الحساب المحلي.', error);
+                }
+            }
 
             const user = users.find(u => normalizeText(u.name) === normalizedName && u.password === password);
 
