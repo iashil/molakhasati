@@ -150,7 +150,7 @@
             <button type="submit" class="w-full bg-gray-900 dark:bg-gray-700 text-white text-xs font-medium py-2.5 rounded-md hover:bg-black dark:hover:bg-gray-600 transition-colors">دخول</button>
         </form>
 
-        <button type="button" id="guestLoginButton" class="w-full border border-gray-300 dark:border-neutral-600 text-gray-800 dark:text-gray-100 text-xs font-medium py-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors">الدخول كضيف</button>
+        <!-- <button type="button" id="guestLoginButton" class="w-full border border-gray-300 dark:border-neutral-600 text-gray-800 dark:text-gray-100 text-xs font-medium py-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors">الدخول كضيف</button> -->
 
         <!-- 2. نموذج إنشاء حساب جديد -->
         <form id="registerForm" class="space-y-4 hidden">
@@ -417,43 +417,43 @@
             else window.location.href = 'index.html';
         });
 
-        document.getElementById('guestLoginButton').addEventListener('click', async function() {
-            this.disabled = true;
-            this.textContent = 'جارٍ الدخول...';
-            const guestId = `guest_${typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Date.now()}`;
-            const guest = {
-                id: guestId,
-                name: '',
-                role: 'guest',
-                isGuest: true,
-                status: 'active',
-                lastLoginAt: new Date().toISOString()
+        // document.getElementById('guestLoginButton').addEventListener('click', async function() {
+        //     this.disabled = true;
+        //     this.textContent = 'جارٍ الدخول...';
+        //     const guestId = `guest_${typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Date.now()}`;
+        //     const guest = {
+        //         id: guestId,
+        //         name: '',
+        //         role: 'guest',
+        //         isGuest: true,
+        //         status: 'active',
+        //         lastLoginAt: new Date().toISOString()
             };
 
-            try {
-                if (db) {
-                    await db.collection('users').doc(guestId).set({
-                        name: guest.name,
-                        role: guest.role,
-                        isGuest: true,
-                        status: guest.status,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                }
-                const users = JSON.parse(localStorage.getItem('app_users') || '[]');
-                users.push(guest);
-                localStorage.setItem('app_users', JSON.stringify(users));
-                localStorage.setItem('current_user', JSON.stringify(guest));
-                window.location.href = 'index.html';
-            } catch (error) {
-                console.error('تعذر إنشاء جلسة الضيف:', error);
-                const errorDiv = document.getElementById('loginError');
-                errorDiv.textContent = 'تعذر الدخول كضيف الآن. حاول مرة أخرى.';
-                errorDiv.classList.remove('hidden');
-                this.disabled = false;
-                this.textContent = 'الدخول كضيف';
-            }
+            // try {
+            //     if (db) {
+            //         await db.collection('users').doc(guestId).set({
+            //             name: guest.name,
+            //             role: guest.role,
+            //             isGuest: true,
+            //             status: guest.status,
+            //             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            //             lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
+            //         });
+            //     }
+            //     const users = JSON.parse(localStorage.getItem('app_users') || '[]');
+            //     users.push(guest);
+            //     localStorage.setItem('app_users', JSON.stringify(users));
+            //     localStorage.setItem('current_user', JSON.stringify(guest));
+            //     window.location.href = 'index.html';
+            // } catch (error) {
+            //     console.error('تعذر إنشاء جلسة الضيف:', error);
+            //     const errorDiv = document.getElementById('loginError');
+            //     errorDiv.textContent = 'تعذر الدخول كضيف الآن. حاول مرة أخرى.';
+            //     errorDiv.classList.remove('hidden');
+            //     this.disabled = false;
+            //     this.textContent = 'الدخول كضيف';
+            // }
         });
     </script>
     <span aria-hidden="true" class="pointer-events-none fixed bottom-2 right-2 z-[25] select-none text-[9px] leading-none text-gray-500/50 dark:text-gray-400/45">الإصدار 2.12.0</span>
