@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="language.js"></script>
     <title>تسجيل الدخول - منصة ملخصاتي</title>
-    <!-- 1. استدعاء مكتبة Tailwind أولاً -->
+    <!--استدعاء مكتبة Tailwind أولاً -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 2. إعداد الوضع الداكن بعد المكتبة -->
+    <!-- إعداد الوضع الداكن بعد المكتبة -->
     <script>
         tailwind.config = {
             darkMode: 'class'
@@ -133,7 +133,7 @@
             <button onclick="switchTab('register')" id="tabRegister" class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-2 pb-1 transition-all">إنشاء حساب جديد</button>
         </div>
 
-        <!-- 1. نموذج تسجيل الدخول -->
+        <!--نموذج تسجيل الدخول -->
         <form id="loginForm" class="space-y-4">
             <div>
                 <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">الاسم</label>
@@ -152,7 +152,7 @@
 
         <!-- <button type="button" id="guestLoginButton" class="w-full border border-gray-300 dark:border-neutral-600 text-gray-800 dark:text-gray-100 text-xs font-medium py-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors">الدخول كضيف</button> -->
 
-        <!-- 2. نموذج إنشاء حساب جديد -->
+        <!-- نموذج إنشاء حساب جديد -->
         <form id="registerForm" class="space-y-4 hidden">
             <div>
                 <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">الاسم المسموح به</label>
@@ -250,7 +250,6 @@
 
         const currentUser = JSON.parse(localStorage.getItem('current_user'));
         if (currentUser) {
-            // تم إصلاح هذا السطر ليعمل بشكل صحيح
             if (currentUser.role === 'admin') window.location.href = 'admin.html';
             else window.location.href = 'index.html';
         }
@@ -317,12 +316,34 @@
                 return;
             }
 
+            // فحص التكرار في الجهاز الحالي
             const users = JSON.parse(localStorage.getItem('app_users') || '[]');
             const nameExists = users.some(u => normalizeText(u.name) === normalizedName);
             if (nameExists) {
                 errorDiv.textContent = 'هذا الاسم مسجل بالفعل، يرجى تسجيل الدخول.';
                 errorDiv.classList.remove('hidden');
                 return;
+            }
+
+            // فحص التكرار في قاعدة بيانات فايربيز (للأجهزة الأخرى)
+            if (db) {
+                try {
+                    const snapshot = await db.collection('users').get();
+                    let nameExistsInDb = false;
+                    snapshot.forEach(doc => {
+                        if (normalizeText(doc.data().name) === normalizedName) {
+                            nameExistsInDb = true;
+                        }
+                    });
+
+                    if (nameExistsInDb) {
+                        errorDiv.textContent = 'هذا الاسم مسجل بالفعل، يرجى تسجيل الدخول.';
+                        errorDiv.classList.remove('hidden');
+                        return;
+                    }
+                } catch (error) {
+                    console.error("حدث خطأ أثناء التحقق من قاعدة البيانات:", error);
+                }
             }
 
             const newUser = {
