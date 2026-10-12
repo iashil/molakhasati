@@ -1,845 +1,1814 @@
 <!DOCTYPE html>
+
 <html lang="ar" dir="rtl">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <script src="language.js"></script>
+
     <title>لوحة الإدارة - التحكم بالأمان والمحتوى</title>
+
     <!-- 1. استدعاء مكتبة Tailwind أولاً -->
+
     <script src="https://cdn.tailwindcss.com"></script>
+
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
+
     <!-- 2. إعداد الوضع الداكن بعد استدعاء المكتبة -->
+
     <script src="presence.js"></script>
+
     <script>
+
         tailwind.config = {
+
             darkMode: 'class'
+
         }
+
     </script>
+
     <style>
+
         :root {
+
             --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
             --motion-fast: 240ms;
+
         }
+
+
 
         .admin-shell,
+
         .admin-card,
+
         .admin-table-row {
+
             transition: opacity var(--motion-fast) var(--motion-ease),
+
                         transform var(--motion-fast) var(--motion-ease);
+
         }
+
+
 
         .admin-shell {
+
             animation: adminIn 260ms var(--motion-ease) both;
+
         }
+
+
 
         .admin-card {
+
             animation: adminIn 260ms var(--motion-ease) both;
+
         }
+
+
 
         .admin-card:nth-child(2) {
+
             animation-delay: 40ms;
+
         }
+
+
 
         .admin-card:nth-child(3) {
+
             animation-delay: 80ms;
+
         }
+
+
 
         @keyframes adminIn {
+
             from {
+
                 opacity: 0;
+
                 transform: translateY(12px);
+
             }
+
             to {
+
                 opacity: 1;
+
                 transform: translateY(0);
+
             }
+
         }
 
+
+
         @media (prefers-reduced-motion: reduce) {
+
             *, *::before, *::after {
+
                 animation-duration: 0.01ms !important;
+
                 animation-iteration-count: 1 !important;
+
                 transition-duration: 0.01ms !important;
+
             }
+
         }
+
+
 
         .sidebar-overlay {
+
             transition: opacity 260ms var(--motion-ease), visibility 260ms var(--motion-ease);
+
             will-change: opacity;
+
         }
+
         .sidebar-overlay.visible { opacity: 1; visibility: visible; pointer-events: auto; }
+
         body.admin-auth-pending > header,
+
         body.admin-auth-pending #contentLayout,
+
         body.admin-auth-pending > footer { visibility: hidden; }
+
         .sidebar-animated {
+
             transition: transform 280ms var(--motion-ease), opacity 260ms var(--motion-ease);
+
             will-change: transform, opacity;
+
         }
+
         .sidebar-item-enter {
+
             opacity: 0; transform: translateX(10px);
+
             animation: sidebarItemIn 260ms var(--motion-ease) forwards;
+
         }
+
         .sidebar-item-enter:nth-child(2) { animation-delay: 30ms; }
+
         .sidebar-item-enter:nth-child(3) { animation-delay: 60ms; }
+
         .sidebar-item-enter:nth-child(4) { animation-delay: 90ms; }
+
         @keyframes sidebarItemIn {
+
             from { opacity: 0; transform: translateX(10px); }
+
             to { opacity: 1; transform: translateX(0); }
+
         }
+
         .menu-toggle { transform-origin: center; }
+
         @media (prefers-reduced-motion: reduce) {
+
             .sidebar-animated, .sidebar-overlay { transition-duration: 0.01ms !important; }
+
             .sidebar-item-enter { animation-duration: 0.01ms !important; }
+
         }
+
     </style>
+
 </head>
+
 <body class="admin-auth-pending bg-gray-100 text-gray-900 dark:bg-neutral-900 dark:text-gray-100 min-h-screen transition-colors duration-300">
 
+
+
     <header class="bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 sticky top-0 z-50">
+
         <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
+
             <div class="flex items-center gap-3">
+
                 <button id="mobileSidebarToggle" onclick="toggleSidebar()" class="menu-toggle inline-flex lg:hidden items-center justify-center w-10 h-10 rounded-md border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-gray-800 dark:text-gray-100 shadow-sm" aria-label="فتح القائمة">☰</button>
+
                 <a href="index.html" class="font-serif font-bold text-xl border-2 border-gray-800 dark:border-gray-200 px-2 py-0.5 rounded hover:opacity-80 transition-opacity">ملخصاتي</a>
+
             </div>
+
             <div class="flex items-center gap-2 sm:gap-3">
+
                 <button id="desktopSidebarToggle" onclick="toggleSidebar()" class="menu-toggle hidden lg:inline-flex items-center justify-center w-10 h-10 rounded-md border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-gray-800 dark:text-gray-100 shadow-sm" aria-label="فتح القائمة">☰</button>
+
                 <span class="hidden sm:inline-flex items-center gap-2 text-xs font-bold text-gray-700 dark:text-gray-200"><span class="bg-red-600 text-white px-2 py-0.5 rounded">ADMIN</span><span>لوحة تحكم المسؤولين</span></span>
+
                 <button type="button" id="themeToggle" class="border border-gray-300 dark:border-neutral-700 px-2 py-1 rounded-full transition-colors hover:bg-gray-100 dark:hover:bg-neutral-800" aria-label="تغيير لون الخلفية">🌙 الوضع الداكن</button>
+
             </div>
+
         </div>
+
     </header>
+
+
 
     <div id="sidebarOverlay" onclick="closeSidebar()" class="sidebar-overlay fixed inset-0 z-40 bg-black/40 opacity-0 invisible pointer-events-none lg:hidden"></div>
 
+
+
     <div id="contentLayout" class="max-w-6xl mx-auto px-4 py-6 lg:grid lg:grid-cols-[260px_minmax(0,1fr)] gap-6">
+
         <aside id="sidebar" class="sidebar-animated fixed inset-y-0 right-0 z-50 w-[82%] max-w-[280px] bg-white dark:bg-neutral-900 border-l border-gray-200 dark:border-neutral-800 shadow-2xl translate-x-full opacity-0 lg:translate-x-0 lg:opacity-100 lg:static lg:w-auto lg:shadow-none lg:border-none lg:bg-transparent dark:lg:bg-transparent">
+
             <div class="flex h-full flex-col p-4">
+
                 <div class="mb-4 flex items-center justify-between pb-3 border-b border-gray-200 dark:border-neutral-800">
+
                     <span class="text-xs font-bold text-gray-500 dark:text-gray-400">القائمة</span>
+
                     <button onclick="closeSidebar()" class="inline-flex items-center justify-center w-8 h-8 rounded-md border border-gray-200 dark:border-neutral-700 text-gray-600 dark:text-gray-300 shrink-0" aria-label="إغلاق القائمة">✕</button>
+
                 </div>
+
                 <nav class="space-y-2">
+
                     <a id="sidebarProfile" href="profile.html" data-sidebar-item="profile" class="sidebar-item-enter flex items-center gap-3 rounded-xl px-3 py-3 font-medium text-sm text-gray-700 dark:text-gray-200 transition hover:bg-gray-100 dark:hover:bg-neutral-800">
+
                         <img src="" alt="صورة المستخدم" class="h-10 w-10 rounded-full object-cover border border-gray-200 dark:border-neutral-700">
+
                         <span class="truncate">حسابي</span>
+
                     </a>
+
                     <a href="https://www.meta.ai/" target="_blank" rel="noopener noreferrer" data-sidebar-item="meta-ai" class="sidebar-item-enter flex items-center gap-3 rounded-xl px-3 py-3 font-medium text-sm text-gray-700 dark:text-gray-200 transition hover:bg-gray-100 dark:hover:bg-neutral-800">
+
                         <span class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-lg text-gray-700 dark:bg-neutral-800 dark:text-gray-200">✨</span>
+
                         <span>Meta AI</span>
+
                     </a>
+
                     <a href="saved.html" data-sidebar-item="saved" class="sidebar-item-enter flex items-center gap-3 rounded-xl px-3 py-3 font-medium text-sm text-gray-700 dark:text-gray-200 transition hover:bg-gray-100 dark:hover:bg-neutral-800">
+
                         <span class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-lg text-gray-700 dark:bg-neutral-800 dark:text-gray-200">🔖</span>
+
                         <span>المحفوظات</span>
+
                     </a>
+
                     <a href="my-posts.html" data-sidebar-item="myPosts" class="sidebar-item-enter flex items-center gap-3 rounded-xl px-3 py-3 font-medium text-sm text-gray-700 dark:text-gray-200 transition hover:bg-gray-100 dark:hover:bg-neutral-800">
+
                         <span class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-lg text-gray-700 dark:bg-neutral-800 dark:text-gray-200">📝</span>
+
                         <span>منشوراتي</span>
+
                     </a>
+
                     <a href="questions.html" data-sidebar-item="questions" class="sidebar-item-enter flex items-center gap-3 rounded-xl px-3 py-3 font-medium text-sm text-gray-700 dark:text-gray-200 transition hover:bg-gray-100 dark:hover:bg-neutral-800">
+
                         <span class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-lg text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">؟</span>
+
                         <span>طرح سؤال</span>
+
                     </a>
+
                     <a href="support.html" data-sidebar-item="support" class="sidebar-item-enter flex items-center gap-3 rounded-xl px-3 py-3 font-medium text-sm text-gray-700 dark:text-gray-200 transition hover:bg-gray-100 dark:hover:bg-neutral-800">
+
                         <span class="flex h-10 w-10 items-center justify-center rounded-full bg-amber-50 text-lg text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">✉</span>
+
                         <span>الدعم</span>
+
                     </a>
+
                 </nav>
+
                 <div class="mt-auto pt-4">
+
                     <div class="border-t border-gray-200 dark:border-neutral-800 my-2"></div>
+
                     <button type="button" onclick="logout()" class="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-3 text-sm font-medium text-red-600 transition hover:bg-red-100 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-900/40">
+
                         <span>🚪</span><span>خروج</span>
+
                     </button>
+
                 </div>
+
             </div>
+
         </aside>
+
+
 
         <main class="admin-shell min-w-0 p-0 space-y-8">
 
+
+
         <!-- 1. إضافة مسؤول جديد -->
-        <section class="admin-card bg-white dark:bg-neutral-800 p-6 rounded-lg border border-gray-200 dark:border-neutral-700 shadow-sm space-y-4 transition-colors">
-            <h2 class="font-bold text-sm text-gray-800 dark:text-gray-100 border-b border-gray-200 dark:border-neutral-700 pb-2">إضافة مسؤول (Admin) جديد</h2>
-            <form id="addAdminForm" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                <input type="text" id="adminName" placeholder="الاسم الكامل" required class="bg-gray-50 dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600 p-2 text-xs rounded outline-none focus:border-gray-900 dark:focus:border-gray-400">
-                <input type="email" id="adminEmail" placeholder="البريد الإلكتروني" required class="bg-gray-50 dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600 p-2 text-xs rounded outline-none focus:border-gray-900 dark:focus:border-gray-400" dir="ltr">
-                <input type="password" id="adminPassword" placeholder="كلمة المرور" required class="bg-gray-50 dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600 p-2 text-xs rounded outline-none focus:border-gray-900 dark:focus:border-gray-400" dir="ltr">
-                <button type="submit" class="bg-gray-900 dark:bg-gray-700 text-white text-xs font-bold rounded py-2 hover:bg-black dark:hover:bg-gray-600 transition-colors">إضافة المسؤول</button>
-            </form>
-        </section>
 
         <section class="admin-card bg-white dark:bg-neutral-800 p-6 rounded-lg border border-gray-200 dark:border-neutral-700 shadow-sm space-y-4 transition-colors">
-            <h2 class="font-bold text-sm text-gray-800 dark:text-gray-100 border-b border-gray-200 dark:border-neutral-700 pb-2">الكلمات الممنوعة في المنشورات</h2>
-            <form id="bannedWordsForm" class="flex flex-col sm:flex-row gap-3">
-                <textarea id="bannedWordsInput" rows="2" placeholder="اكتب الكلمات الممنوعة، وافصل بينها بفاصلة أو سطر جديد" class="flex-1 bg-gray-50 dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600 p-2 text-xs rounded outline-none focus:border-gray-900 dark:focus:border-gray-400"></textarea>
-                <button type="submit" class="bg-gray-900 dark:bg-gray-700 text-white text-xs font-bold rounded px-4 py-2 hover:bg-black dark:hover:bg-gray-600">حفظ الكلمات</button>
+
+            <h2 class="font-bold text-sm text-gray-800 dark:text-gray-100 border-b border-gray-200 dark:border-neutral-700 pb-2">إضافة مسؤول (Admin) جديد</h2>
+
+            <form id="addAdminForm" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+
+                <input type="text" id="adminName" placeholder="الاسم الكامل" required class="bg-gray-50 dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600 p-2 text-xs rounded outline-none focus:border-gray-900 dark:focus:border-gray-400">
+
+                <input type="email" id="adminEmail" placeholder="البريد الإلكتروني" required class="bg-gray-50 dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600 p-2 text-xs rounded outline-none focus:border-gray-900 dark:focus:border-gray-400" dir="ltr">
+
+                <input type="password" id="adminPassword" placeholder="كلمة المرور" required class="bg-gray-50 dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600 p-2 text-xs rounded outline-none focus:border-gray-900 dark:focus:border-gray-400" dir="ltr">
+
+                <button type="submit" class="bg-gray-900 dark:bg-gray-700 text-white text-xs font-bold rounded py-2 hover:bg-black dark:hover:bg-gray-600 transition-colors">إضافة المسؤول</button>
+
             </form>
-            <p id="bannedWordsStatus" class="text-xs text-gray-500 dark:text-gray-400"></p>
+
         </section>
+
+
+
+        <section class="admin-card bg-white dark:bg-neutral-800 p-6 rounded-lg border border-gray-200 dark:border-neutral-700 shadow-sm space-y-4 transition-colors">
+
+            <h2 class="font-bold text-sm text-gray-800 dark:text-gray-100 border-b border-gray-200 dark:border-neutral-700 pb-2">الكلمات الممنوعة في المنشورات</h2>
+
+            <form id="bannedWordsForm" class="flex flex-col sm:flex-row gap-3">
+
+                <textarea id="bannedWordsInput" rows="2" placeholder="اكتب الكلمات الممنوعة، وافصل بينها بفاصلة أو سطر جديد" class="flex-1 bg-gray-50 dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600 p-2 text-xs rounded outline-none focus:border-gray-900 dark:focus:border-gray-400"></textarea>
+
+                <button type="submit" class="bg-gray-900 dark:bg-gray-700 text-white text-xs font-bold rounded px-4 py-2 hover:bg-black dark:hover:bg-gray-600">حفظ الكلمات</button>
+
+            </form>
+
+            <p id="bannedWordsStatus" class="text-xs text-gray-500 dark:text-gray-400"></p>
+
+        </section>
+
+
 
         <!-- 2. إدارة المستخدمين -->
+
         <section class="admin-card bg-white dark:bg-neutral-800 p-6 rounded-lg border border-gray-200 dark:border-neutral-700 shadow-sm space-y-4 transition-colors">
+
             <h2 class="font-bold text-sm text-gray-800 dark:text-gray-100 border-b border-gray-200 dark:border-neutral-700 pb-2">إدارة الحسابات والأعضاء</h2>
+
             <div class="overflow-x-auto">
+
                 <table class="w-full text-right text-xs">
+
                     <thead class="bg-gray-50 dark:bg-neutral-700 border-b border-gray-200 dark:border-neutral-600">
+
                         <tr>
+
                             <th class="p-2">الاسم</th>
+
                             <th class="p-2">البريد الإلكتروني</th>
+
                             <th class="p-2">الرتبة</th>
+
                             <th class="p-2">الحالة</th>
+
                             <th class="p-2">آخر اتصال</th>
+
                             <th class="p-2">الإجراءات</th>
+
                         </tr>
+
                     </thead>
+
                     <tbody id="usersTableBody" class="divide-y dark:divide-neutral-700"></tbody>
+
                 </table>
+
             </div>
+
         </section>
+
+
 
         <!-- 3. إدارة المنشورات والتعليقات -->
+
         <section class="admin-card bg-white dark:bg-neutral-800 p-6 rounded-lg border border-gray-200 dark:border-neutral-700 shadow-sm space-y-4 transition-colors">
+
             <h2 class="font-bold text-sm text-gray-800 dark:text-gray-100 border-b border-gray-200 dark:border-neutral-700 pb-2">المنشورات والتعليقات</h2>
+
             <div id="adminPostsFeed" class="space-y-4"></div>
+
         </section>
 
+
+
         <section class="admin-card bg-white dark:bg-neutral-800 p-6 rounded-lg border border-gray-200 dark:border-neutral-700 shadow-sm space-y-4 transition-colors">
+
             <h2 class="font-bold text-sm text-gray-800 dark:text-gray-100 border-b border-gray-200 dark:border-neutral-700 pb-2">اقتراحات الدعم</h2>
+
             <div id="adminSupportFeed" class="space-y-3"></div>
+
         </section>
 
+
+
         <section class="admin-card bg-white dark:bg-neutral-800 p-6 rounded-lg border border-gray-200 dark:border-neutral-700 shadow-sm space-y-4 transition-colors">
+
             <h2 class="font-bold text-sm text-gray-800 dark:text-gray-100 border-b border-gray-200 dark:border-neutral-700 pb-2">الأسئلة والإجابات</h2>
+
             <p id="adminQuestionsStatus" role="status" class="text-xs text-gray-500 dark:text-gray-400">جارٍ تحميل الأسئلة...</p>
+
             <div id="adminQuestionsFeed" class="space-y-4"></div>
+
         </section>
+
+
 
     </main>
 
+
+
     <footer class="flex justify-center py-6">
+
         <a href="https://www.instagram.com/iashil_/" target="_blank" rel="noopener noreferrer" class="inline-block border border-black bg-black px-4 py-2 text-xs text-white rounded-full dark:border-white dark:bg-white dark:text-black transition-colors hover:opacity-90">
+
             Created By: ashil
+
         </a>
+
     </footer>
 
+
+
     <script>
+
         let currentUser = null;
+
         const FIREBASE_CONFIG = {
+
             apiKey: 'AIzaSyByDS_xwe-nZQWlWTMUgRex4ITMPWtGRKQ',
+
             authDomain: 'molakhasat-web.firebaseapp.com',
+
             projectId: 'molakhasat-web',
+
             messagingSenderId: '87734758041',
+
             appId: '1:87734758041:web:22251786db9b0aee2fa608'
+
         };
+
         const firebaseConfigured = Object.values(FIREBASE_CONFIG).every(value => !value.includes('ضع_'));
+
         let db = null;
+
         let auth = null;
+
+        let functionsService = null;
+
+        let cachedAuthUsers = [];
+
+        let latestFirestoreUsers = null;
+
+        let lastRenderedAdminUsers = [];
+
         if (firebaseConfigured) {
+
             firebase.initializeApp(FIREBASE_CONFIG);
+
             db = firebase.firestore();
+
             auth = firebase.auth();
+
+            functionsService = firebase.functions('us-central1');
+
         }
+
+
 
         // دالة تغيير اللون معدلة لتكون أكثر توافقية
+
         function applyTheme(isDark) {
+
             document.documentElement.classList.toggle('dark', isDark);
+
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
+
             document.getElementById('themeToggle').textContent = isDark ? '☀️ الوضع الفاتح' : '🌙 الوضع الداكن';
+
         }
 
+
+
         const savedThemeIsDark = localStorage.getItem('theme') === 'dark';
+
         applyTheme(savedThemeIsDark);
-        
+
+
+
         document.getElementById('themeToggle').addEventListener('click', function() {
+
             applyTheme(!document.documentElement.classList.contains('dark'));
+
         });
+
+
 
         const ADMIN_EMAIL = 'ashil@admin.com';
+
         const adminAccessReady = new Promise(resolve => {
+
             const denyAccess = () => {
+
                 document.body.classList.add('admin-auth-pending');
+
                 localStorage.removeItem('current_user');
+
                 window.location.replace('login.html');
+
                 resolve(false);
+
             };
 
+
+
             if (!auth) {
+
                 denyAccess();
+
                 return;
+
             }
 
+
+
             auth.onAuthStateChanged(firebaseUser => {
+
                 let storedUser = null;
+
                 try {
+
                     storedUser = JSON.parse(localStorage.getItem('current_user') || 'null');
+
                 } catch (_) {}
 
+
+
                 if (!firebaseUser || String(firebaseUser.email || '').toLowerCase() !== ADMIN_EMAIL || storedUser?.id !== firebaseUser.uid) {
+
                     denyAccess();
+
                     return;
+
                 }
 
+
+
                 currentUser = {
+
                     id: firebaseUser.uid,
+
                     name: 'ashil admin',
+
                     email: firebaseUser.email,
+
                     role: 'admin',
+
                     status: 'active'
+
                 };
+
                 document.body.classList.remove('admin-auth-pending');
+
                 startPresenceTracking(db, currentUser);
+
                 resolve(true);
+
             }, error => {
+
                 console.error('تعذر التحقق من جلسة الإدارة:', error);
+
                 denyAccess();
+
             });
+
         });
+
+
 
         let sidebarIsOpen = window.innerWidth >= 1024;
 
+
+
         function applySidebarState() {
+
             const sidebar = document.getElementById('sidebar');
+
             const overlay = document.getElementById('sidebarOverlay');
+
             const layout = document.getElementById('contentLayout');
+
             const desktopToggle = document.getElementById('desktopSidebarToggle');
+
             if (!sidebar || !overlay || !layout) return;
 
+
+
             if (window.innerWidth >= 1024) {
+
                 sidebar.classList.toggle('lg:hidden', !sidebarIsOpen);
+
                 sidebar.classList.remove('translate-x-full');
+
                 sidebar.classList.toggle('opacity-0', !sidebarIsOpen);
+
                 sidebar.classList.toggle('lg:opacity-100', sidebarIsOpen);
+
                 sidebar.classList.toggle('pointer-events-none', !sidebarIsOpen);
+
                 overlay.classList.remove('visible');
+
                 overlay.classList.add('hidden', 'invisible');
+
                 overlay.classList.add('pointer-events-none');
+
                 layout.classList.toggle('lg:grid-cols-[260px_minmax(0,1fr)]', sidebarIsOpen);
+
                 layout.classList.toggle('lg:grid-cols-1', !sidebarIsOpen);
+
                 if (desktopToggle) desktopToggle.classList.toggle('hidden', sidebarIsOpen);
+
                 return;
+
             }
+
+
 
             sidebar.classList.toggle('translate-x-full', !sidebarIsOpen);
+
             sidebar.classList.toggle('opacity-0', !sidebarIsOpen);
+
             sidebar.classList.toggle('opacity-100', sidebarIsOpen);
+
             sidebar.classList.toggle('pointer-events-none', !sidebarIsOpen);
+
             overlay.classList.toggle('visible', sidebarIsOpen);
+
             overlay.classList.toggle('hidden', !sidebarIsOpen);
+
             overlay.classList.toggle('invisible', !sidebarIsOpen);
+
             overlay.classList.toggle('pointer-events-none', !sidebarIsOpen);
+
             if (desktopToggle) desktopToggle.classList.remove('hidden');
+
         }
+
+
 
         function openSidebar() { sidebarIsOpen = true; applySidebarState(); }
+
         function closeSidebar() { sidebarIsOpen = false; applySidebarState(); }
+
         function toggleSidebar() { sidebarIsOpen ? closeSidebar() : openSidebar(); }
 
+
+
         window.addEventListener('resize', () => {
+
             const shouldBeOpen = window.innerWidth >= 1024;
+
             if (window.innerWidth >= 1024 && !shouldBeOpen) sidebarIsOpen = false;
+
             applySidebarState();
+
         });
+
+
 
         document.querySelectorAll('[data-sidebar-item]').forEach(item => {
+
             item.addEventListener('click', () => {
+
                 if (window.innerWidth < 1024) closeSidebar();
+
             });
+
         });
+
+
 
         function loadSidebarUser() {
+
             const sidebarProfile = document.getElementById('sidebarProfile');
+
             if (!sidebarProfile || !currentUser) return;
+
             const defaultAvatar = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="96" height="96"%3E%3Crect width="100%25" height="100%25" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="55%25" text-anchor="middle" font-size="40"%3E%F0%9F%91%A4%3C/text%3E%3C/svg%3E';
+
             const img = sidebarProfile.querySelector('img');
+
             const name = sidebarProfile.querySelector('span');
+
             if (name) name.textContent = currentUser.name || 'حسابي';
+
             if (img) {
+
                 img.src = safeAdminMediaUrl(currentUser.photoURL, 'image') || defaultAvatar;
+
                 img.onerror = () => { img.onerror = null; img.src = defaultAvatar; };
+
             }
+
             if (db) {
+
                 db.collection('users').doc(currentUser.id).get().then(doc => {
+
                     if (!doc.exists) return;
+
                     const data = doc.data() || {};
+
                     if (name) name.textContent = data.name || currentUser.name || 'حسابي';
+
                     if (img) { img.src = safeAdminMediaUrl(data.photoURL, 'image') || safeAdminMediaUrl(currentUser.photoURL, 'image') || defaultAvatar; }
+
                 }).catch(error => console.error('فشل تحميل بيانات Sidebar:', error));
+
             }
+
         }
+
+
 
         async function logout() {
+
             if (auth) await auth.signOut().catch(error => console.error('تعذر تسجيل الخروج من Firebase:', error));
+
             localStorage.removeItem('current_user');
+
             window.location.href = 'login.html';
+
         }
+
+
 
         // لا يمكن منح صلاحية مدير بأمان من واجهة تعمل في المتصفح فقط.
+
         document.getElementById('addAdminForm').addEventListener('submit', function(e) {
+
             e.preventDefault();
+
             this.reset();
+
             alert('إنشاء مدير من المتصفح غير آمن. أنشئ حساب Firebase وامنح صلاحية الإدارة من بيئة موثوقة.');
+
         });
+
+
 
         function getBannedWords() {
+
             return JSON.parse(localStorage.getItem('banned_words') || '[]');
+
         }
+
+
 
         function renderBannedWords() {
+
             const words = getBannedWords();
+
             document.getElementById('bannedWordsInput').value = words.join(', ');
+
             document.getElementById('bannedWordsStatus').textContent = words.length
+
                 ? `تم حفظ ${words.length} كلمة ممنوعة.`
+
                 : 'لا توجد كلمات ممنوعة حالياً.';
+
         }
 
+
+
         document.getElementById('bannedWordsForm').addEventListener('submit', function(e) {
+
             e.preventDefault();
+
             const words = document.getElementById('bannedWordsInput').value
+
                 .split(/[،,\n]/)
+
                 .map(word => word.trim().toLowerCase())
+
                 .filter((word, index, allWords) => word && allWords.indexOf(word) === index);
+
             localStorage.setItem('banned_words', JSON.stringify(words));
+
             renderBannedWords();
+
         });
+
+
 
         renderBannedWords();
 
+
+
         function getSupportMessages() {
+
             try {
+
                 return JSON.parse(localStorage.getItem('support_messages') || '[]');
+
             } catch (_) {
+
                 return [];
+
             }
+
         }
+
+
 
         function renderSupportMessages(messages) {
+
             const container = document.getElementById('adminSupportFeed');
+
             if (!container) return;
+
             if (!messages.length) {
+
                 container.innerHTML = '<p class="text-xs text-gray-500 dark:text-gray-400">لا توجد اقتراحات أو رسائل دعم حتى الآن.</p>';
+
                 return;
+
             }
+
+
 
             const getMessageTime = message => {
+
                 const time = message.createdAt;
+
                 if (time && typeof time.toDate === 'function') return time.toDate().getTime();
+
                 if (time && Number.isFinite(time.seconds)) return time.seconds * 1000;
+
                 const parsed = new Date(time || 0).getTime();
+
                 return Number.isFinite(parsed) ? parsed : 0;
+
             };
+
             const sortedMessages = [...messages].sort((left, right) => getMessageTime(right) - getMessageTime(left));
+
             const defaultAvatar = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="96" height="96"%3E%3Crect width="100%25" height="100%25" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="55%25" text-anchor="middle" font-size="40"%3E%F0%9F%91%A4%3C/text%3E%3C/svg%3E';
 
+
+
             container.innerHTML = sortedMessages.map(message => {
+
                 const userId = message.userId ? String(message.userId) : '';
+
                 const profile = userId ? (cachedAdminUsers || []).find(user => String(user.id) === userId) : null;
+
                 const displayName = profile?.name || message.name || 'مستخدم';
+
                 const photoURL = safeAdminMediaUrl(message.authorPhotoURL || profile?.photoURL || profile?.image || '', 'image') || defaultAvatar;
+
                 const authorLink = userId ? `profile.html?uid=${encodeURIComponent(userId)}` : '';
+
                 const authorMarkup = authorLink
+
                     ? `<a href="${authorLink}" class="group inline-flex min-w-0 items-center gap-2 rounded-md hover:opacity-80" aria-label="زيارة الملف الشخصي لـ ${escapeAdminHtml(displayName)}"><img src="${escapeAdminHtml(photoURL)}" alt="" class="h-10 w-10 shrink-0 rounded-full border border-gray-200 object-cover dark:border-neutral-600"><span class="min-w-0"><strong class="block truncate text-xs group-hover:underline">${escapeAdminHtml(displayName)}</strong><span class="text-[10px] text-blue-700 dark:text-blue-300">عرض الملف الشخصي</span></span></a>`
+
                     : `<span class="inline-flex items-center gap-2"><img src="${escapeAdminHtml(photoURL)}" alt="" class="h-10 w-10 shrink-0 rounded-full border border-gray-200 object-cover dark:border-neutral-600"><strong class="text-xs">${escapeAdminHtml(displayName)}</strong></span>`;
+
                 const date = new Date(getMessageTime(message) || Date.now());
+
                 return `
+
                     <article class="rounded-lg border border-gray-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900/50">
+
                         <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-3 dark:border-neutral-700">
+
                             ${authorMarkup}
+
                             <time class="text-[10px] text-gray-500 dark:text-gray-400">${escapeAdminHtml(date.toLocaleString(window.getSiteLocale()))}</time>
+
                         </div>
+
                         <p class="mt-3 whitespace-pre-wrap break-words text-xs leading-6 text-gray-700 dark:text-gray-300">${escapeAdminHtml(message.text || '')}</p>
+
                     </article>
+
                 `;
+
             }).join('');
+
         }
 
+
+
         async function refreshSupportMessages() {
+
             let messages = getSupportMessages();
+
             if (db) {
+
                 try {
+
                     const snapshot = await db.collection('support_messages').orderBy('createdAt', 'desc').limit(50).get();
+
                     const firebaseMessages = [];
+
                     snapshot.forEach(doc => firebaseMessages.push({ id: doc.id, ...doc.data() }));
+
                     if (firebaseMessages.length) {
+
                         const merged = [...firebaseMessages, ...messages.filter(item => !firebaseMessages.some(msg => msg.id === item.id))];
+
                         localStorage.setItem('support_messages', JSON.stringify(merged));
+
                         messages = merged;
+
                     }
+
                 } catch (error) {
+
                     console.error('تعذر جلب اقتراحات الدعم:', error);
+
                 }
+
             }
+
             renderSupportMessages(messages);
+
         }
+
+
 
         // تغيير حالة المستخدم (حظر / تفعيل)
         async function toggleUserStatus(userId) {
-            const users = JSON.parse(localStorage.getItem('app_users') || '[]');
-            const user = (cachedAdminUsers || []).find(u => String(u.id) === String(userId)) || users.find(u => String(u.id) === String(userId));
-            if (user) {
-                if (user.id === currentUser.id) {
-                    alert('لا يمكنك حظر حسابك الحالي!');
-                    return;
+            const user = (lastRenderedAdminUsers || []).find(u => String(u.id) === String(userId)) ||
+                (JSON.parse(localStorage.getItem('app_users') || '[]')).find(u => String(u.id) === String(userId));
+            if (!user) return;
+            if (user.authOnly) {
+                alert('هذه هوية Firebase ليس لها ملف مستخدم. احذفها من لوحة الإدارة لإتاحة الاسم مجددًا، ثم أعد التسجيل.');
+                return;
+            }
+            if (String(user.id) === String(currentUser.id) || String(user.authUid || '') === String(currentUser.id)) {
+                alert('لا يمكنك حظر حساب الإدارة الحالي!');
+                return;
+            }
+            const profileId = String(user.documentId || user.id || userId);
+            const nextStatus = (user.status === 'banned') ? 'active' : 'banned';
+            try {
+                if (!db) throw new Error('Firestore unavailable');
+                await db.collection('users').doc(profileId).set({status: nextStatus}, {merge: true});
+                const cached = JSON.parse(localStorage.getItem('app_users') || '[]');
+                cached.forEach(item => {
+                    if (String(item.id) === String(userId) || String(item.authUid || '') === String(user.authUid || '')) item.status = nextStatus;
+                });
+                localStorage.setItem('app_users', JSON.stringify(cached));
+                if (latestFirestoreUsers) {
+                    latestFirestoreUsers = latestFirestoreUsers.map(item => String(item.id) === profileId ? {...item, status: nextStatus} : item);
                 }
-                const nextStatus = (user.status === 'banned') ? 'active' : 'banned';
-                user.status = nextStatus;
-                const localUser = users.find(item => String(item.id) === String(userId));
-                if (localUser) localUser.status = nextStatus;
-                localStorage.setItem('app_users', JSON.stringify(users));
-                if (db) await db.collection('users').doc(userId).set({status: nextStatus}, {merge: true});
-                renderAdminData();
+                renderAdminData(latestFirestoreUsers || cachedAdminUsers || cached, cachedAdminPosts, cachedAdminQuestions);
+            } catch (error) {
+                console.error('تعذر تغيير حالة الحساب:', error);
+                alert('تعذر تغيير حالة الحساب. لم يتم اعتماد التغيير؛ تحقق من الاتصال والصلاحيات.');
             }
         }
 
-        // حذف مستخدم نهائياً
+        // حذف ملف المستخدم وهوية Firebase Authentication وحجز الاسم من خلال Cloud Function موثوقة.
         async function deleteUser(userId) {
-            if (!confirm('هل أنت تأكد من حذف هذا الحساب نهائياً؟')) return;
-            let users = JSON.parse(localStorage.getItem('app_users') || '[]');
-            if (userId === currentUser.id) {
-                alert('لا يمكنك حذف حسابك الحالي!');
+            const target = (lastRenderedAdminUsers || []).find(user =>
+                String(user.id) === String(userId) || String(user.documentId || '') === String(userId)
+            ) || (JSON.parse(localStorage.getItem('app_users') || '[]')).find(user => String(user.id) === String(userId));
+
+            const targetName = String((target && target.name) || '');
+            const targetUid = String((target && (target.authUid || target.uid)) || userId);
+            const documentId = String((target && target.documentId) || (target && target.authOnly ? '' : userId));
+            const label = targetName || targetUid || userId;
+
+            if (!confirm(`هل أنت متأكد من حذف حساب «${label}» نهائيًا؟ سيتم حذف هوية Firebase المرتبطة به وتحرير الاسم لإعادة التسجيل.`)) return;
+            if (String(userId) === String(currentUser.id) || targetUid === String(currentUser.id) ||
+                (target && String(target.role || '').toLowerCase() === 'admin')) {
+                alert('لا يمكنك حذف حساب الإدارة أو أي حساب يحمل صلاحية الإدارة من هذه القائمة.');
                 return;
             }
-            users = users.filter(u => u.id !== userId);
-            localStorage.setItem('app_users', JSON.stringify(users));
-            if (db) await db.collection('users').doc(userId).delete();
-            renderAdminData();
+            if (!db || !auth || !functionsService) {
+                alert('خدمة الحذف الآمن غير متاحة. لم يُحذف أي شيء؛ تأكد من تحميل Firebase Functions ونشر الدالة.');
+                return;
+            }
+
+            const button = document.querySelector(`[data-admin-action="delete-user"][data-user-id="${CSS.escape(String(userId))}"]`);
+            if (button) { button.disabled = true; button.textContent = 'جارٍ الحذف...'; }
+
+            try {
+                const authUser = auth.currentUser;
+                if (!authUser || String(authUser.email || '').toLowerCase() !== 'ashil@admin.com') {
+                    throw Object.assign(new Error('ADMIN_SESSION_INVALID'), {code: 'ADMIN_SESSION_INVALID'});
+                }
+
+                const callable = functionsService.httpsCallable('deleteUserAccount');
+                const result = await callable({
+                    uid: targetUid,
+                    documentId: documentId || targetUid,
+                    name: targetName
+                });
+                if (!result || !result.data || result.data.success !== true) {
+                    throw new Error('The server did not confirm account deletion.');
+                }
+
+                const normalize = value => String(value || '').normalize('NFKC').trim().toLowerCase();
+                const deletedName = normalize(targetName);
+                let localUsers = JSON.parse(localStorage.getItem('app_users') || '[]');
+                localUsers = localUsers.filter(item => item &&
+                    String(item.id) !== String(userId) &&
+                    String(item.id) !== targetUid &&
+                    String(item.authUid || '') !== targetUid &&
+                    !(deletedName && normalize(item.name) === deletedName));
+                localStorage.setItem('app_users', JSON.stringify(localUsers));
+
+                cachedAuthUsers = (cachedAuthUsers || []).filter(item =>
+                    String(item.authUid || '') !== targetUid && !(deletedName && normalize(item.name) === deletedName));
+                if (latestFirestoreUsers) {
+                    latestFirestoreUsers = latestFirestoreUsers.filter(item =>
+                        String(item.id) !== String(documentId) &&
+                        String(item.id) !== targetUid &&
+                        String(item.authUid || item.uid || '') !== targetUid &&
+                        !(deletedName && normalize(item.normalizedName || item.name) === deletedName));
+                }
+                if (cachedAdminUsers) {
+                    cachedAdminUsers = cachedAdminUsers.filter(item =>
+                        String(item.id) !== String(documentId) &&
+                        String(item.id) !== targetUid &&
+                        String(item.authUid || item.uid || '') !== targetUid &&
+                        !(deletedName && normalize(item.normalizedName || item.name) === deletedName));
+                }
+                lastRenderedAdminUsers = (lastRenderedAdminUsers || []).filter(item =>
+                    String(item.id) !== String(userId) && String(item.authUid || '') !== targetUid &&
+                    !(deletedName && normalize(item.name) === deletedName));
+
+                alert('أكد Firebase حذف الحساب وتحرير الاسم. يمكنك الآن إعادة التسجيل به من أي هاتف.');
+                renderAdminData(latestFirestoreUsers || cachedAdminUsers || localUsers, cachedAdminPosts, cachedAdminQuestions);
+            } catch (error) {
+                console.error('فشل حذف الحساب نهائيًا:', error);
+                const code = error && error.code ? error.code : '';
+                if (code === 'functions/permission-denied' || code === 'permission-denied') {
+                    alert('رفض الخادم عملية الحذف. تأكد من جلسة حساب الإدارة وأن Cloud Function منشورة. لم تُمسح البيانات محليًا.');
+                } else if (code === 'functions/not-found' || code === 'not-found') {
+                    alert('دالة deleteUserAccount غير منشورة في Firebase Functions. لم يُحذف الحساب.');
+                } else if (code === 'ADMIN_SESSION_INVALID') {
+                    alert('جلسة الإدارة غير صالحة. سجّل الخروج ثم ادخل بحساب ash il admin المعتمد. لم يُحذف الحساب.');
+                } else {
+                    alert('لم يؤكد الخادم حذف الحساب. لم يتم تنظيف النسخة المحلية؛ افتح Console للتفاصيل وحاول بعد إصلاح الخطأ.');
+                }
+            } finally {
+                if (button) { button.disabled = false; button.textContent = 'حذف'; }
+            }
         }
 
         // حذف منشور مخالف
+
         async function deletePost(postId) {
+
             if (!confirm('هل أنت تأكد من حذف هذا المنشور؟')) return;
+
             let posts = JSON.parse(localStorage.getItem('app_posts') || '[]');
+
             posts = posts.filter(p => p.id !== postId);
+
             localStorage.setItem('app_posts', JSON.stringify(posts));
+
             if (db) await db.collection('posts').doc(postId).delete();
+
             renderAdminData();
+
         }
+
+
 
         let cachedAdminUsers = null;
+
         let cachedAdminPosts = null;
+
         let cachedAdminQuestions = null;
 
-        function escapeAdminHtml(value) {
-            return String(value ?? '').replace(/[&<>\'"]/g, character => ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                "'": '&#39;',
-                '"': '&quot;'
-            }[character]));
+        function mergeProfilesWithAuthUsers(profileRows) {
+            const rows = Array.isArray(profileRows) ? profileRows : [];
+            const authByUid = new Map((cachedAuthUsers || []).map(item => [String(item.authUid), item]));
+            const matched = new Set();
+            const merged = rows.map(profile => {
+                const docId = String(profile.id || profile.documentId || '');
+                const uid = String(profile.authUid || profile.uid || docId);
+                const authUser = authByUid.get(uid);
+                if (authUser) matched.add(String(authUser.authUid));
+                return {
+                    ...(authUser || {}),
+                    ...profile,
+                    id: docId || String(authUser?.authUid || ''),
+                    documentId: docId || null,
+                    authUid: String(authUser?.authUid || profile.authUid || profile.uid || (authUser ? '' : '')) || null,
+                    email: profile.email || authUser?.email || '',
+                    authOnly: false
+                };
+            });
+            for (const authUser of (cachedAuthUsers || [])) {
+                if (matched.has(String(authUser.authUid))) continue;
+                merged.push({
+                    ...authUser,
+                    id: String(authUser.documentId || authUser.authUid),
+                    documentId: authUser.documentId || null,
+                    authUid: String(authUser.authUid),
+                    authOnly: !authUser.documentId
+                });
+            }
+            return merged;
         }
+
+        async function refreshAuthDirectory() {
+            const status = document.getElementById('adminIdentityStatus');
+            if (!functionsService) {
+                if (status) status.textContent = 'دليل هويات Firebase غير متاح. لن تظهر الحسابات التي فقدت ملفاتها من Firestore.';
+                return;
+            }
+            try {
+                const response = await functionsService.httpsCallable('listAuthUsers')({});
+                cachedAuthUsers = Array.isArray(response?.data?.users) ? response.data.users : [];
+                if (status) status.textContent = `تمت مزامنة ${cachedAuthUsers.length} هوية من Firebase Authentication، بما فيها الهويات التي لا تملك ملف مستخدم.`;
+                if (latestFirestoreUsers) renderAdminData(latestFirestoreUsers, cachedAdminPosts, cachedAdminQuestions);
+            } catch (error) {
+                console.error('تعذر جلب هويات Firebase:', error);
+                if (status) status.textContent = 'تعذر جلب كل هويات Firebase. انشر دالة listAuthUsers؛ الحسابات المسجلة في Firestore ستظل ظاهرة.';
+            }
+        }
+
+
+
+        function escapeAdminHtml(value) {
+
+            return String(value ?? '').replace(/[&<>**\\'**"]/g, character => ({
+
+                '&': '&amp;',
+
+                '<': '&lt;',
+
+                '>': '&gt;',
+
+                "'": '&#39;',
+
+                '"': '&quot;'
+
+            }[character]));
+
+        }
+
+
 
         function safeAdminMediaUrl(value, type) {
+
             if (typeof value !== 'string' || !value.trim()) return '';
+
             const url = value.trim();
+
             const dataPattern = type === 'image'
+
                 ? /^data:image\/(?:png|jpeg|webp|gif);base64,[a-z0-9+/]+=*$/i
+
                 : /^data:application\/pdf;base64,[a-z0-9+/]+=*$/i;
+
             if (dataPattern.test(url)) return url;
+
             try {
+
                 const parsed = new URL(url, window.location.href);
+
                 return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? parsed.href : '';
+
             } catch (_) {
+
                 return '';
+
             }
+
         }
+
+
 
         async function deletePostComment(postId, commentId) {
+
             if (!confirm('هل أنت متأكد من حذف هذا التعليق؟')) return;
 
+
+
             try {
+
                 if (db) {
+
                     const postRef = db.collection('posts').doc(postId);
+
                     const postSnapshot = await postRef.get();
+
                     if (!postSnapshot.exists) throw new Error('المنشور غير موجود.');
+
                     const comments = postSnapshot.data().comments || [];
+
                     const comment = comments.find(item => item.id === commentId);
+
                     if (!comment) throw new Error('التعليق غير موجود أو حُذف بالفعل.');
+
                     await postRef.update({comments: firebase.firestore.FieldValue.arrayRemove(comment)});
+
                 } else {
+
                     const localPosts = JSON.parse(localStorage.getItem('app_posts') || '[]');
+
                     const post = localPosts.find(item => item.id === postId);
+
                     if (!post) throw new Error('المنشور غير موجود.');
+
                     post.comments = (post.comments || []).filter(item => item.id !== commentId);
+
                     localStorage.setItem('app_posts', JSON.stringify(localPosts));
+
                 }
+
+
 
                 cachedAdminPosts = (cachedAdminPosts || []).map(post => post.id === postId
+
                     ? {...post, comments: (post.comments || []).filter(item => item.id !== commentId)}
+
                     : post);
+
                 await renderAdminData(cachedAdminUsers, cachedAdminPosts);
+
             } catch (error) {
+
                 console.error('تعذر حذف التعليق:', error);
+
                 alert('تعذر حذف التعليق. تحقق من اتصالك وصلاحيات Firestore ثم حاول مجددًا.');
+
             }
+
         }
+
+
 
         document.getElementById('adminPostsFeed').addEventListener('click', event => {
+
             const button = event.target.closest('[data-delete-comment-id]');
+
             if (button) deletePostComment(button.dataset.postId, button.dataset.deleteCommentId);
 
+
+
             const actionButton = event.target.closest('[data-admin-action]');
+
             if (!actionButton) return;
+
             if (actionButton.dataset.adminAction === 'delete-post') deletePost(actionButton.dataset.postId);
+
         });
+
+
 
         document.getElementById('adminQuestionsFeed').addEventListener('click', event => {
+
             const questionButton = event.target.closest('[data-admin-delete-question]');
+
             if (questionButton) {
+
                 deleteAdminQuestion(questionButton.dataset.adminDeleteQuestion);
+
                 return;
+
             }
+
             const answerButton = event.target.closest('[data-admin-delete-answer]');
+
             if (answerButton) deleteAdminQuestionAnswer(answerButton.dataset.questionId, answerButton.dataset.adminDeleteAnswer);
+
         });
+
+
 
         document.getElementById('usersTableBody').addEventListener('click', event => {
+
             const button = event.target.closest('[data-admin-action]');
+
             if (!button) return;
+
             if (button.dataset.adminAction === 'toggle-user-status') toggleUserStatus(button.dataset.userId);
+
             if (button.dataset.adminAction === 'delete-user') deleteUser(button.dataset.userId);
+
         });
 
+
+
         async function deleteAdminQuestion(questionId) {
+
             if (!confirm('هل تريد حذف السؤال وجميع إجاباته؟')) return;
+
             try {
+
                 if (db) {
+
                     const questionRef = db.collection('questions').doc(questionId);
+
                     const snapshot = await questionRef.get();
+
                     if (!snapshot.exists) throw new Error('السؤال غير موجود أو حُذف بالفعل.');
+
                     await questionRef.delete();
+
                 } else {
+
                     const questions = JSON.parse(localStorage.getItem('app_questions') || '[]')
+
                         .filter(question => question.id !== questionId);
+
                     localStorage.setItem('app_questions', JSON.stringify(questions));
+
                 }
+
                 cachedAdminQuestions = (cachedAdminQuestions || []).filter(question => question.id !== questionId);
+
                 await renderAdminData(cachedAdminUsers, cachedAdminPosts, cachedAdminQuestions);
+
             } catch (error) {
+
                 console.error('تعذر حذف السؤال من لوحة الإدارة:', error);
+
                 alert('تعذر حذف السؤال. تحقق من اتصالك وصلاحيات قاعدة البيانات ثم حاول مجددًا.');
+
             }
+
         }
+
+
 
         async function deleteAdminQuestionAnswer(questionId, answerId) {
+
             if (!confirm('هل تريد حذف هذه الإجابة؟')) return;
+
             try {
+
                 let questions = cachedAdminQuestions || JSON.parse(localStorage.getItem('app_questions') || '[]');
+
                 const question = questions.find(item => item.id === questionId);
+
                 if (!question) throw new Error('السؤال غير موجود.');
+
                 const answers = Array.isArray(question.answers) ? question.answers : [];
+
                 const answer = answers.find(item => item.id === answerId);
+
                 if (!answer) throw new Error('الإجابة غير موجودة أو حُذفت بالفعل.');
 
+
+
                 if (db) {
+
                     await db.collection('questions').doc(questionId).update({answers: firebase.firestore.FieldValue.arrayRemove(answer)});
+
                 } else {
+
                     question.answers = answers.filter(item => item.id !== answerId);
+
                     questions = questions.map(item => item.id === questionId ? question : item);
+
                     localStorage.setItem('app_questions', JSON.stringify(questions));
+
                 }
 
+
+
                 cachedAdminQuestions = questions.map(item => item.id === questionId
+
                     ? {...item, answers: answers.filter(answerItem => answerItem.id !== answerId)}
+
                     : item);
+
                 await renderAdminData(cachedAdminUsers, cachedAdminPosts, cachedAdminQuestions);
+
             } catch (error) {
+
                 console.error('تعذر حذف الإجابة من لوحة الإدارة:', error);
+
                 alert('تعذر حذف الإجابة. تحقق من اتصالك وصلاحيات قاعدة البيانات ثم حاول مجددًا.');
+
             }
+
         }
+
+
 
         async function renderAdminData(cloudUsers, cloudPosts, cloudQuestions) {
+
             if (cloudUsers) cachedAdminUsers = cloudUsers;
+
             if (cloudPosts) cachedAdminPosts = cloudPosts;
+
             if (cloudQuestions) cachedAdminQuestions = cloudQuestions;
-            const users = cloudUsers || cachedAdminUsers || JSON.parse(localStorage.getItem('app_users') || '[]');
+
+            const profileRows = cloudUsers || cachedAdminUsers || JSON.parse(localStorage.getItem('app_users') || '[]');
+
+            const users = mergeProfilesWithAuthUsers(profileRows);
+
+            lastRenderedAdminUsers = users;
+
             const posts = cloudPosts || cachedAdminPosts || JSON.parse(localStorage.getItem('app_posts') || '[]');
+
             const questions = cloudQuestions || cachedAdminQuestions || JSON.parse(localStorage.getItem('app_questions') || '[]');
+
             const guestUsers = users
+
                 .filter(user => user.isGuest === true || user.role === 'guest')
+
                 .sort((left, right) => {
+
                     const getCreatedTime = user => user.createdAt && typeof user.createdAt.toMillis === 'function'
+
                         ? user.createdAt.toMillis()
+
                         : new Date(user.createdAt || user.lastLoginAt || 0).getTime();
+
                     return getCreatedTime(left) - getCreatedTime(right) || String(left.id).localeCompare(String(right.id));
+
                 });
+
             const guestNumbers = new Map(guestUsers.map((user, index) => [String(user.id), index + 1]));
 
+
+
             // 1. جدول الحسابات
+
             const usersTbody = document.getElementById('usersTableBody');
+
             usersTbody.innerHTML = '';
+
             users.forEach(u => {
+
                 const tr = document.createElement('tr');
+
                 const isGuest = u.isGuest === true || u.role === 'guest';
+
                 const displayName = isGuest ? `الضيف ${guestNumbers.get(String(u.id))}` : (u.name || 'بدون اسم');
+
                 // تمت إضافة كلاسات الدارك مود هنا
+
                 tr.innerHTML = `
+
                     <td class="p-2 font-medium">${escapeAdminHtml(displayName)}</td>
+
                     <td class="p-2 text-gray-500 dark:text-gray-400" dir="ltr">${isGuest ? '—' : escapeAdminHtml(u.email || 'غير متوفر')}</td>
+
                     <td class="p-2"><span class="px-1.5 py-0.5 rounded text-[10px] ${u.role === 'admin' ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300' : 'bg-gray-100 text-gray-700 dark:bg-neutral-700 dark:text-gray-300'}">${isGuest ? 'ضيف' : escapeAdminHtml(u.role || 'user')}</span></td>
+
                     <td class="p-2" data-user-presence="${escapeAdminHtml(u.id)}">${getAdminPresenceMarkup(u)}</td>
+
                     <td class="p-2 text-gray-500 dark:text-gray-400" dir="ltr">${formatAdminTime(u.lastSeenAt || u.lastLoginAt)}</td>
+
                     <td class="p-2 space-x-2 space-x-reverse">
-                        <button type="button" data-admin-action="toggle-user-status" data-user-id="${escapeAdminHtml(u.id)}" class="text-amber-600 dark:text-amber-500 hover:underline">${u.status === 'banned' ? 'إلغاء الحظر' : 'حظر'}</button>
-                        <button type="button" data-admin-action="delete-user" data-user-id="${escapeAdminHtml(u.id)}" class="text-red-600 dark:text-red-500 hover:underline">حذف</button>
+
+                        <button type="button" data-admin-action="toggle-user-status" data-user-id="${escapeAdminHtml(u.id)}" ${u.authOnly || u.role === 'admin' ? 'disabled title="هذه الهوية لا يمكن تغيير حالتها من هذا الإجراء"' : ''} class="text-amber-600 dark:text-amber-500 hover:underline disabled:opacity-40 disabled:cursor-not-allowed">${u.status === 'banned' ? 'إلغاء الحظر' : 'حظر'}</button>
+
+                        <button type="button" data-admin-action="delete-user" data-user-id="${escapeAdminHtml(u.id)}" ${u.role === 'admin' ? 'disabled title="لا يمكن حذف مسؤول من هنا"' : ''} class="text-red-600 dark:text-red-500 hover:underline disabled:opacity-40 disabled:cursor-not-allowed">حذف</button>
+
                     </td>
+
                 `;
+
                 usersTbody.appendChild(tr);
+
             });
+
+
 
             // 2. جدار المنشورات مع الهوية الحقيقية
+
             const postsContainer = document.getElementById('adminPostsFeed');
+
             postsContainer.innerHTML = '';
 
+
+
             if (posts.length === 0) {
+
                 postsContainer.innerHTML = '<p class="text-xs text-gray-500 dark:text-gray-400 text-center py-4">لا توجد منشورات مرفوعة حالياً.</p>';
+
             } else posts.forEach(p => {
+
                 const div = document.createElement('div');
+
                 // تمت إضافة كلاسات الدارك مود هنا للمنشورات
+
                 div.className = "border dark:border-neutral-700 rounded p-3 bg-gray-50 dark:bg-neutral-800/50 space-y-2 transition-colors";
+
                 const pdfUrl = safeAdminMediaUrl(p.pdfURL || (p.pdf && p.pdf.data), 'pdf');
+
                 const imageUrl = safeAdminMediaUrl(p.image, 'image');
+
                 const pdfName = escapeAdminHtml(p.pdfName || (p.pdf && p.pdf.name) || 'document.pdf');
+
                 div.innerHTML = `
+
                     <div class="flex items-center justify-between border-b dark:border-neutral-700 pb-2">
+
                         <div>
+
                             <span class="font-bold text-xs">${escapeAdminHtml(p.authorName || 'بدون اسم')}</span>
+
                             ${p.isAnonymous ? '<span class="bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 text-[10px] px-1.5 py-0.5 rounded mr-2 font-bold">نُشر بمجهول</span>' : ''}
+
                             <div class="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">${escapeAdminHtml(p.grade || '')} ${p.subject ? '• ' + escapeAdminHtml(p.subject) : ''} • ${formatPostTime(p.time)}</div>
+
                         </div>
+
                         <button type="button" data-admin-action="delete-post" data-post-id="${escapeAdminHtml(p.id)}" class="bg-red-600 text-white text-[10px] px-2 py-1 rounded hover:bg-red-700 transition-colors">حذف المنشور</button>
+
                     </div>
+
                     ${p.text ? `<p class="text-xs text-gray-800 dark:text-gray-200">${escapeAdminHtml(p.text)}</p>` : ''}
+
                     ${pdfUrl ? `<a href="${escapeAdminHtml(pdfUrl)}" target="_blank" rel="noopener noreferrer" download="${pdfName}" class="inline-flex items-center gap-2 text-xs text-blue-700 dark:text-blue-400 underline">📄 فتح ملف PDF: ${pdfName}</a>` : ''}
+
                     ${imageUrl ? `<img src="${escapeAdminHtml(imageUrl)}" alt="صورة المنشور" class="max-h-40 rounded border dark:border-neutral-700 object-cover">` : ''}
+
                     <details class="border-t border-gray-200 pt-2 dark:border-neutral-700">
+
                         <summary class="cursor-pointer text-xs font-semibold text-gray-700 dark:text-gray-200">التعليقات (${Array.isArray(p.comments) ? p.comments.length : 0})</summary>
+
                         <div class="mt-2 space-y-2">
+
                             ${(Array.isArray(p.comments) ? p.comments : []).map(comment => `
+
                                 <article class="flex items-start justify-between gap-3 rounded border border-gray-200 p-2 dark:border-neutral-700">
+
                                     <div class="min-w-0">
+
                                         <p class="text-[11px] font-semibold">${escapeAdminHtml(comment.authorName || 'مستخدم')}</p>
+
                                         <p class="whitespace-pre-wrap break-words text-xs">${escapeAdminHtml(comment.text)}</p>
+
                                         <time class="text-[10px] text-gray-400">${comment.createdAt ? escapeAdminHtml(formatAdminTime(comment.createdAt)) : ''}</time>
+
                                     </div>
+
                                     <button type="button" data-post-id="${escapeAdminHtml(p.id)}" data-delete-comment-id="${escapeAdminHtml(comment.id)}" class="shrink-0 text-[10px] text-red-600 hover:underline dark:text-red-400">حذف التعليق</button>
+
                                 </article>
+
                             `).join('') || '<p class="text-[11px] text-gray-500">لا توجد تعليقات.</p>'}
+
                         </div>
+
                     </details>
+
                 `;
+
                 postsContainer.appendChild(div);
+
             });
+
+
 
             const questionsContainer = document.getElementById('adminQuestionsFeed');
+
             const questionsStatus = document.getElementById('adminQuestionsStatus');
+
             questionsContainer.innerHTML = '';
+
             if (!questions.length) {
+
                 questionsStatus.textContent = 'لا توجد أسئلة مطروحة حالياً.';
+
                 return;
+
             }
+
+
 
             questionsStatus.textContent = `${questions.length} سؤال`;
+
             questions.forEach(question => {
+
                 const card = document.createElement('article');
+
                 card.className = 'space-y-3 rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-neutral-700 dark:bg-neutral-800/50';
+
                 const questionId = escapeAdminHtml(question.id);
+
                 const imageUrl = safeAdminMediaUrl(question.imageURL, 'image');
+
                 const answers = Array.isArray(question.answers) ? question.answers : [];
+
                 card.innerHTML = `
+
                     <div class="flex items-start justify-between gap-3">
+
                         <div class="min-w-0 flex-1">
+
                             <div class="flex flex-wrap items-center justify-between gap-2"><strong class="text-xs">${escapeAdminHtml(question.authorName || 'مستخدم')}</strong><time class="text-[10px] text-gray-500">${formatAdminTime(question.createdAt)}</time></div>
+
                             <p class="mt-2 whitespace-pre-wrap break-words text-xs leading-relaxed">${escapeAdminHtml(question.text || '')}</p>
+
                             ${imageUrl ? `<img src="${escapeAdminHtml(imageUrl)}" alt="صورة السؤال" class="mt-2 max-h-48 rounded border border-gray-200 object-contain dark:border-neutral-700">` : ''}
+
                         </div>
+
                         <button type="button" data-admin-delete-question="${questionId}" class="shrink-0 rounded-md bg-red-600 px-3 py-2 text-[10px] font-semibold text-white hover:bg-red-700">حذف السؤال</button>
+
                     </div>
+
                     <div class="border-t border-gray-200 pt-2 dark:border-neutral-700">
+
                         <h3 class="mb-2 text-[11px] font-bold text-gray-700 dark:text-gray-200">الإجابات (${answers.length})</h3>
+
                         ${answers.length ? `<div class="space-y-2">${answers.map(answer => `<div class="flex items-start justify-between gap-3 rounded border border-gray-200 bg-white p-2 dark:border-neutral-700 dark:bg-neutral-900"><div class="min-w-0"><div class="flex flex-wrap items-center justify-between gap-2"><strong class="text-[10px]">${escapeAdminHtml(answer.authorName || 'مستخدم')}</strong><time class="text-[9px] text-gray-500">${formatAdminTime(answer.createdAt)}</time></div><p class="mt-1 whitespace-pre-wrap break-words text-xs">${escapeAdminHtml(answer.text || '')}</p></div><button type="button" data-admin-delete-answer="${escapeAdminHtml(answer.id)}" data-question-id="${questionId}" class="shrink-0 rounded px-2 py-1 text-[10px] text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30">حذف الإجابة</button></div>`).join('')}</div>` : '<p class="text-[10px] text-gray-500">لا توجد إجابات.</p>'}
+
                     </div>`;
+
                 questionsContainer.appendChild(card);
+
             });
+
         }
+
+
 
         function formatAdminTime(time) {
+
             if (!time) return 'لم يتصل بعد';
+
             if (typeof time.toDate === 'function') return time.toDate().toLocaleString(window.getSiteLocale());
+
             return new Date(time).toLocaleString(window.getSiteLocale());
+
         }
+
+
 
         function getAdminPresenceMarkup(user) {
+
             if (user.status === 'banned') {
+
                 return '<span class="px-1.5 py-0.5 rounded text-[10px] bg-red-600 text-white dark:bg-red-700">محظور</span>';
+
             }
 
+
+
             const lastSeen = user.lastSeenAt;
+
             const lastSeenTime = lastSeen && typeof lastSeen.toDate === 'function'
+
                 ? lastSeen.toDate().getTime()
+
                 : new Date(lastSeen || '').getTime();
+
             const elapsed = Date.now() - lastSeenTime;
+
             const isOnline = Number.isFinite(lastSeenTime) && elapsed >= -60000 && elapsed <= 120000;
+
             return isOnline
+
                 ? '<span class="px-1.5 py-0.5 rounded text-[10px] bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300">متصل</span>'
+
                 : '<span class="px-1.5 py-0.5 rounded text-[10px] bg-gray-100 text-gray-600 dark:bg-neutral-700 dark:text-gray-300">غير متصل</span>';
+
         }
 
+
+
         function refreshAdminPresence() {
+
             if (!cachedAdminUsers) return;
+
             document.querySelectorAll('[data-user-presence]').forEach(cell => {
+
                 const user = cachedAdminUsers.find(item => String(item.id) === cell.dataset.userPresence);
+
                 if (user) cell.innerHTML = getAdminPresenceMarkup(user);
+
             });
+
         }
+
+
 
         setInterval(refreshAdminPresence, 30000);
 
+
+
         function formatPostTime(time) {
+
             if (!time) return 'جارٍ الحفظ...';
+
             if (typeof time.toDate === 'function') return time.toDate().toLocaleString(window.getSiteLocale());
+
             return escapeAdminHtml(time);
+
         }
 
-        adminAccessReady.then(isAuthorized => {
+
+
+        adminAccessReady.then(async isAuthorized => {
+
             if (!isAuthorized) return;
+
+            await refreshAuthDirectory();
+
             if (db) {
+
                 db.collection('users').onSnapshot(snapshot => {
+
                     const users = [];
+
                     snapshot.forEach(doc => users.push({id: doc.id, ...doc.data()}));
-                    renderAdminData(users, cachedAdminPosts);
+
+                    latestFirestoreUsers = users;
+
+                    renderAdminData(users, cachedAdminPosts, cachedAdminQuestions);
+
                     renderSupportMessages(getSupportMessages());
+
                 });
+
                 db.collection('posts').onSnapshot(snapshot => {
+
                     const posts = [];
+
                     snapshot.forEach(doc => posts.push({id: doc.id, ...doc.data()}));
+
                     renderAdminData(cachedAdminUsers, posts, cachedAdminQuestions);
+
                 });
+
                 db.collection('questions').orderBy('createdAt', 'desc').limit(100).onSnapshot(snapshot => {
+
                     const questions = [];
+
                     snapshot.forEach(doc => questions.push({id: doc.id, ...doc.data()}));
+
                     renderAdminData(cachedAdminUsers, cachedAdminPosts, questions);
+
                 }, error => {
+
                     console.error('تعذر تحميل الأسئلة في لوحة الإدارة:', error);
+
                     const status = document.getElementById('adminQuestionsStatus');
+
                     status.textContent = 'تعذر تحميل الأسئلة. تحقق من الاتصال وصلاحيات قاعدة البيانات.';
+
                 });
+
                 db.collection('support_messages').orderBy('createdAt', 'desc').limit(50).onSnapshot(snapshot => {
+
                     const supportMessages = [];
+
                     snapshot.forEach(doc => supportMessages.push({id: doc.id, ...doc.data()}));
+
                     localStorage.setItem('support_messages', JSON.stringify(supportMessages));
+
                     renderSupportMessages(supportMessages);
+
                 }, error => {
+
                     console.error('تعذر تحميل رسائل الدعم:', error);
+
                     refreshSupportMessages();
+
                 });
+
             } else {
+
                 renderAdminData();
+
                 refreshSupportMessages();
+
             }
+
             refreshSupportMessages();
+
         });
+
     </script>
-    <span aria-hidden="true" class="pointer-events-none fixed bottom-2 right-2 z-[25] select-none text-[9px] leading-none text-gray-500/50 dark:text-gray-400/45">الإصدار 2.12.0</span>
+
+    <span aria-hidden="true" class="pointer-events-none fixed bottom-2 right-2 z-[25] select-none text-[9px] leading-none text-gray-500/50 dark:text-gray-400/45">الإصدار 2.14.0</span>
+
 </body>
+
 </html>
