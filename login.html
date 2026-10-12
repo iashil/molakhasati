@@ -1,482 +1,997 @@
 <!DOCTYPE html>
+
 <html lang="ar" dir="rtl">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <script src="language.js"></script>
+
     <title>تسجيل الدخول - منصة ملخصاتي</title>
+
     <!--استدعاء مكتبة Tailwind أولاً -->
+
     <script src="https://cdn.tailwindcss.com"></script>
+
     <!-- إعداد الوضع الداكن بعد المكتبة -->
+
     <script>
+
         tailwind.config = {
+
             darkMode: 'class'
+
         }
+
     </script>
+
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
     <style>
+
         .login-page {
+
             min-height: 100vh;
+
             min-height: var(--login-visible-height, 100dvh);
+
             display: flex;
+
             flex-direction: column;
+
             overflow-x: hidden;
+
             padding: max(.75rem, env(safe-area-inset-top)) max(.75rem, env(safe-area-inset-right)) max(.75rem, env(safe-area-inset-bottom)) max(.75rem, env(safe-area-inset-left));
+
         }
+
+
 
         .login-layout {
+
             width: 100%;
+
             max-width: 64rem;
+
             flex: 1 0 auto;
+
             align-items: center;
+
             justify-content: center;
+
             margin-inline: auto;
+
         }
+
+
 
         .login-footer {
+
             position: static;
+
             flex: none;
+
             padding-block: .5rem 2.5rem;
+
         }
 
+
+
         #themeToggle {
+
             position: absolute;
+
             top: max(.75rem, env(safe-area-inset-top));
+
             left: max(.75rem, env(safe-area-inset-left));
+
             z-index: 10;
+
         }
+
+
 
         .login-page input { scroll-margin-block: 1rem; }
 
+
+
         @media (max-width: 767px) {
+
             .login-layout {
+
                 flex: 0 0 auto;
+
                 align-items: stretch;
+
                 justify-content: flex-start;
+
                 gap: .75rem;
+
                 padding-block: 3.75rem .75rem;
+
             }
+
+
 
             .login-card {
+
                 order: -1;
+
                 max-width: none;
+
                 margin: 0;
+
                 padding: 1.25rem;
+
             }
 
+
+
             .login-rules {
+
                 order: 1;
+
                 width: 100%;
+
                 padding: 1rem;
+
             }
+
         }
+
     </style>
+
 </head>
+
 <body class="login-page bg-gray-50 text-gray-900 dark:bg-neutral-900 dark:text-gray-100 transition-colors duration-300">
+
+
 
     <button type="button" id="themeToggle" class="fixed top-4 left-4 border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" aria-label="تغيير لون الخلفية">🌙 الوضع الداكن</button>
 
+
+
     <div class="login-layout flex flex-col lg:flex-row-reverse gap-5 items-stretch">
 
+
+
         <!-- بطاقة القواعد في الجهة اليمنى -->
+
         <aside class="login-rules w-full lg:w-80 bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 p-6 rounded-lg shadow-sm transition-colors duration-300">
+
             <div class="flex items-center gap-3 mb-5">
+
                 <div class="w-10 h-10 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 flex items-center justify-center text-lg shadow-sm">
+
                     📜
+
                 </div>
+
                 <div>
+
                     <h2 class="font-bold text-base">قواعد المنصة</h2>
+
                     <p class="text-[11px] text-gray-500 dark:text-gray-400">يرجى الالتزام بالقواعد</p>
+
                 </div>
+
             </div>
+
+
 
             <div class="space-y-3 text-xs leading-6">
+
                 <div class="flex gap-2">
+
                     <span>🚫</span>
+
                     <p>ممنوع الدخول بأسماء أشخاص آخرين، استخدم اسمك فقط.</p>
+
                 </div>
+
                 <div class="flex gap-2">
+
                     <span>⚠️</span>
+
                     <p>إذا دخلت باسم غير اسمك، سيتم طردك من المنصة بواسطة الإدارة.</p>
+
                 </div>
+
                 <div class="flex gap-2">
+
                     <span>👨‍💼</span>
+
                     <p>الادمن يستطيع رؤية هوية صاحب المنشور حتى عند النشر بشكل مجهول.</p>
+
                 </div>
+
                 <div class="flex gap-2">
+
                     <span>🕵️</span>
+
                     <p>تستطيع إرسال التسريبات بشكل مجهول، ولن تظهر هويتك للمستخدمين.</p>
+
                 </div>
+
                 <div class="flex gap-2">
+
                     <span>📚</span>
+
                     <p>تستطيع إرسال صور الدفاتر والكتب بهويتك العادية.</p>
+
                 </div>
+
                 <div class="flex gap-2">
+
                     <span>🔎</span>
+
                     <p>ابحث عن ما تريد وانشر ما تريد.</p>
+
                 </div>
+
                 <div class="flex gap-2">
+
                     <span>🔞</span>
+
                     <p>عند إرسال كلمة بذيئة، يتم تنبيه الإدارة مع صورة واسم الشخص الذي أرسلها.</p>
+
                 </div>
+
             </div>
+
         </aside>
 
+
+
         <!-- بطاقة تسجيل الدخول -->
+
         <div class="login-card w-full lg:flex-1 lg:max-w-md lg:mx-auto bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 p-8 rounded-lg shadow-sm space-y-6 transition-colors duration-300">
-        
+
+
+
         <!-- التبديل بين الدخول والتسجيل -->
+
         <div class="flex border-b border-gray-200 dark:border-neutral-700 pb-2 gap-4 justify-center">
+
             <button onclick="switchTab('login')" id="tabLogin" class="font-bold text-gray-700 dark:text-white border-b-2 border-gray-700 dark:border-white px-2 pb-1 transition-all">تسجيل الدخول</button>
+
             <button onclick="switchTab('register')" id="tabRegister" class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-2 pb-1 transition-all">إنشاء حساب جديد</button>
+
         </div>
 
+
+
         <!--نموذج تسجيل الدخول -->
+
         <form id="loginForm" class="space-y-4">
+
             <div>
+
                 <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">الاسم</label>
+
                 <input type="text" id="loginName" required dir="auto" class="w-full bg-gray-50 dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 rounded-md p-2 text-xs outline-none focus:border-gray-600 dark:focus:border-gray-400" placeholder="أدخل اسمك (عربي أو English)">
+
             </div>
+
             <div>
+
                 <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">كلمة المرور</label>
+
                 <div class="relative">
+
                     <input type="password" id="loginPassword" required dir="auto" class="w-full bg-gray-50 dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 rounded-md p-2 pl-8 text-xs outline-none focus:border-gray-600 dark:focus:border-gray-400">
+
                     <button type="button" onclick="togglePass('loginPassword', this)" class="absolute left-2 top-1/2 -translate-y-1/2 text-xs opacity-60 hover:opacity-100 select-none">👁️</button>
+
                 </div>
+
             </div>
+
             <div id="loginError" class="hidden text-xs text-red-600 dark:text-red-400 text-center bg-red-50 dark:bg-red-900/30 p-2 rounded"></div>
+
             <button type="submit" class="w-full bg-gray-900 dark:bg-gray-700 text-white text-xs font-medium py-2.5 rounded-md hover:bg-black dark:hover:bg-gray-600 transition-colors">دخول</button>
+
         </form>
+
+
 
         <!-- <button type="button" id="guestLoginButton" class="w-full border border-gray-300 dark:border-neutral-600 text-gray-800 dark:text-gray-100 text-xs font-medium py-2.5 rounded-md hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors">الدخول كضيف</button> -->
 
+
+
         <!-- نموذج إنشاء حساب جديد -->
+
         <form id="registerForm" class="space-y-4 hidden">
+
             <div>
+
                 <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">الاسم المسموح به</label>
+
                 <input type="text" id="regName" required dir="auto" class="w-full bg-gray-50 dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 rounded-md p-2 text-xs outline-none focus:border-gray-600 dark:focus:border-gray-400" placeholder="مثال: ashil أو فراس">
+
             </div>
+
             <div>
+
                 <label class="block text-xs text-gray-600 dark:text-gray-300 mb-1">كلمة المرور الجديدة</label>
+
                 <div class="relative">
+
                     <input type="password" id="regPassword" required dir="auto" class="w-full bg-gray-50 dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 rounded-md p-2 pl-8 text-xs outline-none focus:border-gray-600 dark:focus:border-gray-400">
+
                     <button type="button" onclick="togglePass('regPassword', this)" class="absolute left-2 top-1/2 -translate-y-1/2 text-xs opacity-60 hover:opacity-100 select-none">👁️</button>
+
                 </div>
+
             </div>
+
             <div id="regError" class="hidden text-xs text-red-600 dark:text-red-400 text-center bg-red-50 dark:bg-red-900/30 p-2 rounded"></div>
+
             <button type="submit" class="w-full bg-green-600 text-white text-xs font-medium py-2.5 rounded-md hover:bg-green-700 transition-colors">إنشاء الحساب ودخول</button>
+
         </form>
 
+
+
         </div>
+
     </div>
 
+
+
     <footer class="login-footer flex justify-center">
+
         <a href="https://www.instagram.com/iashil_/" target="_blank" rel="noopener noreferrer" class="inline-block border border-black bg-black px-4 py-2 text-xs text-white rounded-full dark:border-white dark:bg-white dark:text-black transition-colors hover:opacity-90">
+
             Created By: ashil
+
         </a>
+
     </footer>
 
+
+
     <script>
+
         const FIREBASE_CONFIG = {
+
             apiKey: 'AIzaSyByDS_xwe-nZQWlWTMUgRex4ITMPWtGRKQ',
+
             authDomain: 'molakhasat-web.firebaseapp.com',
+
             projectId: 'molakhasat-web',
+
             messagingSenderId: '87734758041',
+
             appId: '1:87734758041:web:22251786db9b0aee2fa608'
+
         };
+
         const firebaseConfigured = Object.values(FIREBASE_CONFIG).every(value => !value.includes('ضع_'));
+
         let db = null;
+
         let auth = null;
+
         if (firebaseConfigured) {
+
             firebase.initializeApp(FIREBASE_CONFIG);
+
             db = firebase.firestore();
+
             auth = firebase.auth();
+
         }
 
-        const allowedNames = ["مجد" ,"اصيل", "صلاح", "محمد", "رشاد", "ابوبكر", "حسين", "احمد", "معتز", "منير", "سالم", "مهاب", "فراس", "شهاب", "عمار", "عبد الحكيم", "هيثم ابراهيم", "صالح", "سيف", "باوزير", "جراح", "جمال"];
+
+
+        const allowedNames = ["مجد" ,"اصيل", "صلاح", "محمد", "رشاد", "ابوبكر", "حسين", "احمد", "معتز", "منير", "سالم", "مهاب", "فراس", "شهاب", "عمار", "عبد الحكيم", "هيثم", "صالح", "سيف", "باوزير", "جراح", "جمال", "جلال"];
+
+
 
         function applyTheme(isDark) {
+
             document.documentElement.classList.toggle('dark', isDark);
+
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
+
             document.getElementById('themeToggle').textContent = isDark ? '☀️ الوضع الفاتح' : '🌙 الوضع الداكن';
+
         }
+
+
 
         applyTheme(localStorage.getItem('theme') === 'dark');
+
         document.getElementById('themeToggle').addEventListener('click', function() {
+
             applyTheme(!document.documentElement.classList.contains('dark'));
+
         });
 
+
+
         (function keepLoginViewportVisible() {
+
             const viewport = window.visualViewport;
+
             const updateHeight = () => {
+
                 const height = viewport ? viewport.height : window.innerHeight;
+
                 document.documentElement.style.setProperty('--login-visible-height', `${height}px`);
+
             };
+
             updateHeight();
+
             viewport?.addEventListener('resize', updateHeight);
+
             window.addEventListener('resize', updateHeight, {passive: true});
 
+
+
             document.querySelectorAll('#loginForm input, #registerForm input').forEach(input => {
+
                 input.addEventListener('focus', () => requestAnimationFrame(() => {
+
                     const top = viewport?.offsetTop || 0;
+
                     const bottom = top + (viewport?.height || window.innerHeight);
+
                     const rect = input.getBoundingClientRect();
+
                     if (rect.top < top + 12 || rect.bottom > bottom - 12) {
+
                         input.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+
                     }
+
                 }));
+
             });
+
         })();
 
+
+
         function togglePass(inputId, btn) {
+
             const input = document.getElementById(inputId);
+
             if (input.type === 'password') {
+
                 input.type = 'text';
+
                 btn.textContent = '🔒';
+
             } else {
+
                 input.type = 'password';
+
                 btn.textContent = '👁️';
+
             }
+
         }
+
+
 
         const forbiddenWords = ['سبام', 'إعلان', 'كلمة_ممنوعة',"فاك يو", "فاكيو", "انيك", "انيكك", "انيككم", "اهين", "اهينك", "اهينكم", "سكس", "زاني", "زانيين", "زنوات", "عار", "عاركم", "مخنوث", "مخنث", "مخنثين", "مخنثون", "مخنوثين", "مخنوثات", "مخنثات", "معروبه", "عرب", "غراب", "انهش", "انهاش", "كرنج", "كس", "كسمك", "كسمكم", "كسك", "كسهم", "طيز", "اطياز", "طيزهم", "اطيازكم", "قضيب", "مازوخي", "مازوخيين"];
 
+
+
         function hasForbiddenWords(text) {
+
             const lowerText = text.toLowerCase();
+
             return forbiddenWords.some(word => lowerText.includes(word.toLowerCase()));
+
         }
+
+
 
         const currentUser = JSON.parse(localStorage.getItem('current_user'));
+
         if (currentUser) {
+
             if (currentUser.role === 'admin') window.location.href = 'admin.html';
+
             else window.location.href = 'index.html';
+
         }
+
+
 
         (function initDB() {
+
             let users = JSON.parse(localStorage.getItem('app_users') || '[]');
+
             users = users.filter(user => user && user.role !== 'admin' && typeof user.name === 'string' && user.name.toLowerCase() !== 'admin');
 
+
+
             const uniqueUsers = [];
+
             users.forEach(user => {
+
                 const existingUser = uniqueUsers.find(existing => normalizeText(existing.name) === normalizeText(user.name));
+
                 if (!existingUser) {
+
                     uniqueUsers.push(user);
+
                 } else if (user.lastLoginAt && (!existingUser.lastLoginAt || user.lastLoginAt > existingUser.lastLoginAt)) {
+
                     existingUser.lastLoginAt = user.lastLoginAt;
+
                 }
+
             });
+
             users = uniqueUsers;
-            
+
+
+
             localStorage.setItem('app_users', JSON.stringify(users));
+
         })();
 
+
+
         function switchTab(tab) {
+
             const loginForm = document.getElementById('loginForm');
+
             const registerForm = document.getElementById('registerForm');
+
             const tabLogin = document.getElementById('tabLogin');
+
             const tabRegister = document.getElementById('tabRegister');
 
+
+
             if (tab === 'login') {
+
                 loginForm.classList.remove('hidden');
+
                 registerForm.classList.add('hidden');
+
                 tabLogin.className = "font-bold text-gray-700 dark:text-white border-b-2 border-gray-700 dark:border-white px-2 pb-1 transition-all";
+
                 tabRegister.className = "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-2 pb-1 transition-all";
+
             } else {
+
                 registerForm.classList.remove('hidden');
+
                 loginForm.classList.add('hidden');
+
                 tabRegister.className = "font-bold text-gray-700 dark:text-white border-b-2 border-gray-700 dark:border-white px-2 pb-1 transition-all";
+
                 tabLogin.className = "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-2 pb-1 transition-all";
+
             }
+
         }
 
+
+
         function normalizeText(text) {
-            return text.trim().toLowerCase();
+            return String(text || '').normalize('NFKC').trim().toLowerCase();
         }
+
+        // Every allowed display name maps to a stable, unique Firebase Auth email.
+        // This email is internal only; users still enter their display name.
+        // Firebase Authentication enforces uniqueness server-side, including simultaneous sign-ups.
+        function getAccountEmailForName(name) {
+            const normalizedName = normalizeText(name);
+            const key = Array.from(normalizedName)
+                .map(character => character.codePointAt(0).toString(16))
+                .join('-');
+            return `user-${key}@molakhasat-web.firebaseapp.com`;
+        }
+
+        function setFormError(element, message) {
+            element.textContent = message;
+            element.classList.remove('hidden');
+        }
+
+        function getFriendlyAuthError(error, mode) {
+            const code = error && error.code ? error.code : '';
+
+            if (code === 'USERNAME_ALREADY_EXISTS' || code === 'auth/email-already-in-use') {
+                return 'هذا الاسم مسجل بالفعل، لا يمكن إنشاء حساب آخر به. سجّل الدخول بالحساب الأصلي.';
+            }
+            if (code === 'auth/weak-password') {
+                return 'كلمة المرور ضعيفة؛ استخدم 6 أحرف أو أكثر.';
+            }
+            if (code === 'auth/invalid-email') {
+                return 'تعذر إنشاء هوية الحساب الداخلية. تحقق من إعدادات Firebase Authentication.';
+            }
+            if (code === 'auth/network-request-failed') {
+                return 'تعذر الاتصال بالإنترنت. لم يتم إنشاء الحساب؛ حاول مجددًا.';
+            }
+            if (code === 'permission-denied' || code === 'firestore/permission-denied') {
+                return 'تعذر التحقق من الحسابات أو حفظ الحساب في Firebase بسبب الصلاحيات. أوقفنا العملية لحماية الاسم؛ راجع قواعد Firestore.';
+            }
+            if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+                return mode === 'register'
+                    ? 'تعذر إنشاء الحساب بهذه البيانات. تحقق من الإعدادات وحاول مجددًا.'
+                    : 'الاسم أو كلمة المرور غير صحيحة.';
+            }
+            console.error('Firebase authentication error:', error);
+            return mode === 'register'
+                ? 'تعذر إكمال إنشاء الحساب بأمان. لم نسمح بتسجيل محلي بديل؛ تحقق من إعدادات Firebase والاتصال.'
+                : 'تعذر تسجيل الدخول عبر Firebase. تحقق من الاتصال ثم حاول مجددًا.';
+        }
+
+
 
         document.getElementById('registerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            const form = this;
+            const submitButton = form.querySelector('button[type="submit"]');
             const rawName = document.getElementById('regName').value.trim();
             const password = document.getElementById('regPassword').value;
             const errorDiv = document.getElementById('regError');
+            errorDiv.classList.add('hidden');
 
-            const normalizedName = normalizeText(rawName);
+            if (submitButton.disabled) return;
+            submitButton.disabled = true;
+            const originalButtonText = submitButton.textContent;
+            submitButton.textContent = 'جارٍ التحقق من الاسم...';
 
-            if (normalizedName === 'admin' || normalizedName.includes('admin')) {
-                errorDiv.textContent = 'لا يمكنك إنشاء حساب بهذه الصلاحية من هنا.';
-                errorDiv.classList.remove('hidden');
-                return;
-            }
+            let createdCredential = null;
+            let profileSaved = false;
 
-            const isAllowed = allowedNames.some(name => normalizeText(name) === normalizedName);
-            if (!isAllowed) {
-                errorDiv.textContent = 'عذراً، هذا الاسم غير مصرح له بإنشاء حساب.';
-                errorDiv.classList.remove('hidden');
-                return;
-            }
+            try {
+                const normalizedName = normalizeText(rawName);
 
-            // فحص التكرار في الجهاز الحالي
-            const users = JSON.parse(localStorage.getItem('app_users') || '[]');
-            const nameExists = users.some(u => normalizeText(u.name) === normalizedName);
-            if (nameExists) {
-                errorDiv.textContent = 'هذا الاسم مسجل بالفعل، يرجى تسجيل الدخول.';
-                errorDiv.classList.remove('hidden');
-                return;
-            }
-
-            // فحص التكرار في قاعدة بيانات فايربيز (للأجهزة الأخرى)
-            if (db) {
-                try {
-                    const snapshot = await db.collection('users').get();
-                    let nameExistsInDb = false;
-                    snapshot.forEach(doc => {
-                        if (normalizeText(doc.data().name) === normalizedName) {
-                            nameExistsInDb = true;
-                        }
-                    });
-
-                    if (nameExistsInDb) {
-                        errorDiv.textContent = 'هذا الاسم مسجل بالفعل، يرجى تسجيل الدخول.';
-                        errorDiv.classList.remove('hidden');
-                        return;
-                    }
-                } catch (error) {
-                    console.error("حدث خطأ أثناء التحقق من قاعدة البيانات:", error);
+                if (normalizedName === 'admin' || normalizedName.includes('admin')) {
+                    throw Object.assign(new Error('ADMIN_NAME_NOT_ALLOWED'), { code: 'ADMIN_NAME_NOT_ALLOWED' });
                 }
+
+                const isAllowed = allowedNames.some(name => normalizeText(name) === normalizedName);
+                if (!isAllowed) {
+                    throw Object.assign(new Error('NAME_NOT_ALLOWED'), { code: 'NAME_NOT_ALLOWED' });
+                }
+
+                if (!auth || !db) {
+                    throw Object.assign(new Error('FIREBASE_UNAVAILABLE'), { code: 'FIREBASE_UNAVAILABLE' });
+                }
+
+                // Fast local check only; the authoritative uniqueness check is Firebase Auth below.
+                const cachedUsers = JSON.parse(localStorage.getItem('app_users') || '[]');
+                if (cachedUsers.some(user => user && normalizeText(user.name) === normalizedName)) {
+                    throw Object.assign(new Error('USERNAME_ALREADY_EXISTS'), { code: 'USERNAME_ALREADY_EXISTS' });
+                }
+
+                // Check profiles created by the older version, which did not use Firebase Authentication.
+                // Fail closed if Firestore cannot be checked; never continue after a database error.
+                const legacySnapshot = await db.collection('users').get();
+                const legacyNameExists = legacySnapshot.docs.some(doc => {
+                    const data = doc.data() || {};
+                    return (typeof data.name === 'string' && normalizeText(data.name) === normalizedName) ||
+                        (typeof data.normalizedName === 'string' && normalizeText(data.normalizedName) === normalizedName);
+                });
+
+                if (legacyNameExists) {
+                    throw Object.assign(new Error('USERNAME_ALREADY_EXISTS'), { code: 'USERNAME_ALREADY_EXISTS' });
+                }
+
+                // Firebase Auth creates the account atomically. Two devices trying the same name
+                // get the same internal email, so only one can ever create that account.
+                const internalEmail = getAccountEmailForName(normalizedName);
+                createdCredential = await auth.createUserWithEmailAndPassword(internalEmail, password);
+                const uid = createdCredential.user.uid;
+                const now = firebase.firestore.FieldValue.serverTimestamp();
+
+                await db.collection('users').doc(uid).set({
+                    name: rawName,
+                    normalizedName: normalizedName,
+                    role: 'user',
+                    status: 'active',
+                    createdAt: now,
+                    lastLoginAt: now
+                });
+                profileSaved = true;
+
+                const newUser = {
+                    id: uid,
+                    authUid: uid,
+                    name: rawName,
+                    role: 'user',
+                    status: 'active',
+                    lastLoginAt: new Date().toISOString()
+                };
+
+                // Do not store new users' passwords in localStorage; Firebase Auth handles credentials.
+                const updatedUsers = cachedUsers.filter(user => !user || normalizeText(user.name) !== normalizedName);
+                updatedUsers.push(newUser);
+                localStorage.setItem('app_users', JSON.stringify(updatedUsers));
+                localStorage.setItem('current_user', JSON.stringify(newUser));
+                window.location.href = 'index.html';
+            } catch (error) {
+                console.error('تعذر إنشاء الحساب:', error);
+
+                // If Auth creation succeeded but profile saving failed, try to roll back the partial account.
+                if (createdCredential && !profileSaved) {
+                    try {
+                        await createdCredential.user.delete();
+                    } catch (rollbackError) {
+                        console.error('تعذر التراجع عن حساب Firebase غير المكتمل:', rollbackError);
+                    }
+                }
+
+                let message;
+                if (error.code === 'ADMIN_NAME_NOT_ALLOWED') {
+                    message = 'لا يمكنك إنشاء حساب بهذه الصلاحية من هنا.';
+                } else if (error.code === 'NAME_NOT_ALLOWED') {
+                    message = 'عذرًا، هذا الاسم غير مصرح له بإنشاء حساب.';
+                } else if (error.code === 'FIREBASE_UNAVAILABLE') {
+                    message = 'خدمة الحسابات غير متاحة. لم يتم إنشاء الحساب؛ تأكد من إعداد Firebase Authentication وFirestore.';
+                } else {
+                    message = getFriendlyAuthError(error, 'register');
+                }
+                setFormError(errorDiv, message);
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = originalButtonText;
             }
-
-            const newUser = {
-                id: 'user_' + Date.now(),
-                name: rawName,
-                password: password,
-                role: 'user',
-                status: 'active',
-                lastLoginAt: new Date().toISOString()
-            };
-
-            users.push(newUser);
-            localStorage.setItem('app_users', JSON.stringify(users));
-            localStorage.setItem('current_user', JSON.stringify(newUser));
-            if (db) await db.collection('users').doc(newUser.id).set({
-                name: newUser.name,
-                role: newUser.role,
-                status: newUser.status,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            window.location.href = 'index.html';
         });
 
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            const form = this;
+            const submitButton = form.querySelector('button[type="submit"]');
             const rawName = document.getElementById('loginName').value.trim();
             const password = document.getElementById('loginPassword').value;
             const errorDiv = document.getElementById('loginError');
+            errorDiv.classList.add('hidden');
 
-            const users = JSON.parse(localStorage.getItem('app_users') || '[]');
-            const normalizedName = normalizeText(rawName);
+            if (submitButton.disabled) return;
+            submitButton.disabled = true;
+            const originalButtonText = submitButton.textContent;
+            submitButton.textContent = 'جارٍ تسجيل الدخول...';
 
-            if (normalizedName === 'ashil admin') {
-                if (!auth) {
-                    errorDiv.textContent = 'تعذر الاتصال بخدمة تسجيل دخول الإدارة في Firebase.';
-                    errorDiv.classList.remove('hidden');
+            try {
+                const normalizedName = normalizeText(rawName);
+                const cachedUsers = JSON.parse(localStorage.getItem('app_users') || '[]');
+
+                if (normalizedName === 'ashil admin') {
+                    if (!auth) {
+                        setFormError(errorDiv, 'تعذر الاتصال بخدمة تسجيل دخول الإدارة في Firebase.');
+                        return;
+                    }
+
+                    try {
+                        const credential = await auth.signInWithEmailAndPassword('ashil@admin.com', password);
+                        const admin = {
+                            id: credential.user.uid,
+                            name: 'ashil admin',
+                            email: credential.user.email,
+                            role: 'admin',
+                            status: 'active',
+                            lastLoginAt: new Date().toISOString()
+                        };
+                        localStorage.setItem('current_user', JSON.stringify(admin));
+                        window.location.href = 'admin.html';
+                        return;
+                    } catch (error) {
+                        console.error('تعذر تسجيل دخول المدير عبر Firebase:', error);
+                        setFormError(errorDiv, 'تعذر دخول الإدارة. تحقق من تفعيل البريد وكلمة المرور في Firebase ومن صحة كلمة المرور.');
+                        return;
+                    }
+                }
+
+                if (!auth || !db) {
+                    setFormError(errorDiv, 'خدمة الحسابات غير متاحة حاليًا. تحقق من إعدادات Firebase واتصال الإنترنت.');
                     return;
                 }
 
                 try {
-                    const credential = await auth.signInWithEmailAndPassword('ashil@admin.com', password);
-                    const admin = {
-                        id: credential.user.uid,
-                        name: 'ashil admin',
-                        email: credential.user.email,
-                        role: 'admin',
-                        status: 'active',
+                    // New accounts authenticate through Firebase, so the same account works on other devices.
+                    const credential = await auth.signInWithEmailAndPassword(getAccountEmailForName(normalizedName), password);
+                    const uid = credential.user.uid;
+                    const userRef = db.collection('users').doc(uid);
+                    const userSnapshot = await userRef.get();
+                    let profile;
+
+                    if (userSnapshot.exists) {
+                        profile = userSnapshot.data() || {};
+                        if (normalizeText(profile.name) !== normalizedName) {
+                            await auth.signOut();
+                            throw Object.assign(new Error('PROFILE_NAME_MISMATCH'), { code: 'PROFILE_NAME_MISMATCH' });
+                        }
+                    } else {
+                        // Recover from a rare partial signup where Auth succeeded but the profile write did not.
+                        profile = {
+                            name: rawName,
+                            normalizedName: normalizedName,
+                            role: 'user',
+                            status: 'active',
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        };
+                        await userRef.set(profile, { merge: true });
+                    }
+
+                    if (profile.status === 'banned') {
+                        await auth.signOut();
+                        setFormError(errorDiv, 'تم حظر هذا الحساب من استخدام المنصة.');
+                        return;
+                    }
+
+                    if (profile.role === 'admin') {
+                        await auth.signOut();
+                        setFormError(errorDiv, 'يجب تسجيل دخول الإدارة عبر حساب Firebase المعتمد.');
+                        return;
+                    }
+
+                    const user = {
+                        id: profile.legacyId || uid,
+                        authUid: uid,
+                        name: profile.name || rawName,
+                        role: 'user',
+                        status: profile.status || 'active',
                         lastLoginAt: new Date().toISOString()
                     };
-                    localStorage.setItem('current_user', JSON.stringify(admin));
-                    window.location.href = 'admin.html';
+
+                    await userRef.set({
+                        name: user.name,
+                        normalizedName: normalizedName,
+                        role: 'user',
+                        status: user.status,
+                        lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+
+                    // Replace an obsolete local entry for this name and remove any legacy plaintext password for it.
+                    const updatedUsers = cachedUsers.filter(item => !item || normalizeText(item.name) !== normalizedName);
+                    updatedUsers.push(user);
+                    localStorage.setItem('app_users', JSON.stringify(updatedUsers));
+                    localStorage.setItem('current_user', JSON.stringify(user));
+                    window.location.href = 'index.html';
                     return;
-                } catch (error) {
-                    console.error('تعذر تسجيل دخول المدير عبر Firebase:', error);
-                    errorDiv.textContent = 'تعذر دخول الإدارة. تحقق من تفعيل البريد وكلمة المرور في Firebase ومن صحة كلمة المرور.';
-                    errorDiv.classList.remove('hidden');
-                    return;
+                } catch (authError) {
+                    // Backward compatibility for accounts created before Firebase Auth was used.
+                    // This fallback is allowed only when Firebase explicitly says the new identity does not exist.
+                    if (authError.code === 'auth/user-not-found' || authError.code === 'auth/invalid-credential') {
+                        const legacyUser = cachedUsers.find(item => item && normalizeText(item.name) === normalizedName && item.password === password && item.role !== 'admin');
+                        if (legacyUser) {
+                            // Confirm this is genuinely an old-format profile. Never use the local password
+                            // fallback if a new Firebase-authenticated profile exists for this name.
+                            const legacySnapshot = await db.collection('users').get();
+                            const hasNewAuthProfile = legacySnapshot.docs.some(doc => {
+                                const data = doc.data() || {};
+                                return typeof data.normalizedName === 'string' && normalizeText(data.normalizedName) === normalizedName;
+                            });
+                            const legacyDoc = legacySnapshot.docs.find(doc => {
+                                const data = doc.data() || {};
+                                return doc.id === String(legacyUser.id) &&
+                                    typeof data.name === 'string' && normalizeText(data.name) === normalizedName &&
+                                    !data.normalizedName;
+                            });
+
+                            if (legacyDoc && !hasNewAuthProfile) {
+                                const legacyProfile = legacyDoc.data() || {};
+                                if (legacyProfile.status === 'banned' || legacyUser.status === 'banned') {
+                                    setFormError(errorDiv, 'تم حظر هذا الحساب من استخدام المنصة.');
+                                    return;
+                                }
+                                legacyUser.lastLoginAt = new Date().toISOString();
+                                localStorage.setItem('app_users', JSON.stringify(cachedUsers));
+                                localStorage.setItem('current_user', JSON.stringify(legacyUser));
+                                // This is an old-format account: it remains local-only until a safe migration is performed.
+                                window.location.href = 'index.html';
+                                return;
+                            }
+                        }
+                    }
+
+                    if (authError.code === 'PROFILE_NAME_MISMATCH') {
+                        setFormError(errorDiv, 'تعذر مطابقة اسم الحساب مع سجل Firebase. تواصل مع الإدارة.');
+                    } else if (authError.code === 'auth/user-not-found' || authError.code === 'auth/wrong-password' || authError.code === 'auth/invalid-credential') {
+                        setFormError(errorDiv, 'الاسم أو كلمة المرور غير صحيحة.');
+                    } else {
+                        setFormError(errorDiv, getFriendlyAuthError(authError, 'login'));
+                    }
                 }
+            } catch (error) {
+                console.error('حدث خطأ غير متوقع أثناء تسجيل الدخول:', error);
+                setFormError(errorDiv, 'تعذر إكمال تسجيل الدخول. حاول مجددًا بعد التحقق من الاتصال.');
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = originalButtonText;
             }
-
-            const user = users.find(u => normalizeText(u.name) === normalizedName && u.password === password);
-
-            if (!user) {
-                errorDiv.textContent = 'الاسم أو كلمة المرور غير صحيحة.';
-                errorDiv.classList.remove('hidden');
-                return;
-            }
-
-            if (user.status === 'banned') {
-                errorDiv.textContent = 'تم حظر هذا الحساب من استخدام المنصة.';
-                errorDiv.classList.remove('hidden');
-                return;
-            }
-
-            if (user.role === 'admin') {
-                errorDiv.textContent = 'يجب تسجيل دخول الإدارة عبر حساب Firebase المعتمد.';
-                errorDiv.classList.remove('hidden');
-                return;
-            }
-
-            user.lastLoginAt = new Date().toISOString();
-            localStorage.setItem('app_users', JSON.stringify(users));
-            localStorage.setItem('current_user', JSON.stringify(user));
-            if (db) await db.collection('users').doc(user.id).set({
-                name: user.name,
-                role: user.role,
-                status: user.status,
-                lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
-            }, {merge: true});
-            if (user.role === 'admin') window.location.href = 'admin.html';
-            else window.location.href = 'index.html';
         });
 
         // document.getElementById('guestLoginButton').addEventListener('click', async function() {
+
         //     this.disabled = true;
+
         //     this.textContent = 'جارٍ الدخول...';
+
         //     const guestId = `guest_${typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Date.now()}`;
+
         //     const guest = {
+
         //         id: guestId,
+
         //         name: '',
+
         //         role: 'guest',
+
         //         isGuest: true,
+
         //         status: 'active',
+
         //         lastLoginAt: new Date().toISOString()
+
             // };
 
+
+
             // try {
+
             //     if (db) {
+
             //         await db.collection('users').doc(guestId).set({
+
             //             name: guest.name,
+
             //             role: guest.role,
+
             //             isGuest: true,
+
             //             status: guest.status,
+
             //             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+
             //             lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
+
             //         });
+
             //     }
+
             //     const users = JSON.parse(localStorage.getItem('app_users') || '[]');
+
             //     users.push(guest);
+
             //     localStorage.setItem('app_users', JSON.stringify(users));
+
             //     localStorage.setItem('current_user', JSON.stringify(guest));
+
             //     window.location.href = 'index.html';
+
             // } catch (error) {
+
             //     console.error('تعذر إنشاء جلسة الضيف:', error);
+
             //     const errorDiv = document.getElementById('loginError');
+
             //     errorDiv.textContent = 'تعذر الدخول كضيف الآن. حاول مرة أخرى.';
+
             //     errorDiv.classList.remove('hidden');
+
             //     this.disabled = false;
+
             //     this.textContent = 'الدخول كضيف';
+
             // }
+
         // });
+
     </script>
-    <span aria-hidden="true" class="pointer-events-none fixed bottom-2 right-2 z-[25] select-none text-[9px] leading-none text-gray-500/50 dark:text-gray-400/45">الإصدار 2.12.0</span>
+
+    <span aria-hidden="true" class="pointer-events-none fixed bottom-2 right-2 z-[25] select-none text-[9px] leading-none text-gray-500/50 dark:text-gray-400/45">الإصدار 2.13.0</span>
+
 </body>
+
 </html>
